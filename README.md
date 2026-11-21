@@ -7,6 +7,11 @@
 
 # aparté Desk for Strapi
 
+> [!WARNING]
+> **Work in progress.** aparté Desk is being designed and is **not published on npm yet**: the
+> package name below does not install anything today, and the API may still change. Watch this
+> repository for the first release.
+
 Your team takes over the AI chat's conversations from the Strapi admin.
 
 A visitor writes in the chat of your site. An assistant answers, through any OpenAI-compatible
@@ -29,9 +34,14 @@ Strapi 5. Node 20 or later.
 
 ## Install
 
+Once it is published:
+
 ```sh
 npm install @aparte/strapi-desk
 ```
+
+Until then, build it from this repository (`npm install && npm run build`) and point your app at
+the folder with `resolve: '/path/to/strapi-desk'` in the plugin's entry below.
 
 ```ts
 // config/plugins.ts
