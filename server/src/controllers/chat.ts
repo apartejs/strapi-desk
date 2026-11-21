@@ -16,18 +16,7 @@ const chat = ({ strapi }: { strapi: Core.Strapi }) => {
   const hub = () => strapi.plugin('aparte-desk').service('hub');
   const assistant = () => strapi.plugin('aparte-desk').service('assistant');
 
-  /** A page of another site, when the app named the ones allowed. */
-  const refusedOrigin = (ctx): boolean => {
-    const allowed = config().allowedOrigins;
-    const origin = ctx.get('origin');
-    if (!allowed || !origin || allowed.includes(origin)) return false;
-    ctx.status = 403;
-    ctx.body = { error: { status: 403, message: 'This origin may not use the chat.' } };
-    return true;
-  };
-
   const conversationOf = async (ctx, { queryToken = false } = {}): Promise<Conversation | null> => {
-    if (refusedOrigin(ctx)) return null;
     const token = ctx.get('x-desk-token') || (queryToken ? String(ctx.query.token ?? '') : '');
     const conversation = await desk().authenticate(ctx.params.id, token);
     if (!conversation) {
@@ -62,7 +51,6 @@ const chat = ({ strapi }: { strapi: Core.Strapi }) => {
 
   return {
     async open(ctx) {
-      if (refusedOrigin(ctx)) return;
       const body = (ctx.request.body ?? {}) as { visitor?: { name?: unknown; email?: unknown }; context?: unknown };
       const name = typeof body.visitor?.name === 'string' ? body.visitor.name.trim() : undefined;
       const email = typeof body.visitor?.email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.visitor.email.trim()) ? body.visitor.email.trim() : undefined;

@@ -94,7 +94,6 @@ Super admins may do everything.
 | `assistant.timeoutMs` | `60000` | How long a reply may take. |
 | `notices` | English | What the visitor reads: `wanted`, `joined`, `back`, `closed`, `read`. `{name}` is the team member's name. |
 | `maxMessageLength` | `4000` | The longest message a visitor may send. |
-| `allowedOrigins` | `null` | The origins allowed to call the chat API (`['https://shop.example.com']`). `null` leaves it to Strapi's CORS settings. |
 
 The assistant has one tool, `ask_for_someone`, which hands the conversation to the team with a
 reason the desk shows ("a refund not received"). It reads the visitor's messages, its own, and
@@ -106,6 +105,17 @@ Everything is under `/api/aparte-desk`, with no Strapi token: a conversation is 
 token its opening gave, in the `X-Desk-Token` header. The token is given once; keep it where the
 widget keeps its conversation (for example `localStorage`). A wrong token answers 404, as if the
 conversation did not exist.
+
+Which sites may call it is Strapi's own CORS setting, as for the rest of your API:
+
+```js
+// config/middlewares.js
+module.exports = [
+  // …
+  { name: 'strapi::cors', config: { origin: ['https://shop.example.com'] } },
+  // …
+];
+```
 
 | Request | Answer |
 |---|---|

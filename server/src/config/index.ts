@@ -43,11 +43,6 @@ export interface DeskConfig {
   };
   /** The longest message a visitor may send, in characters. */
   maxMessageLength: number;
-  /**
-   * The origins whose pages may call the chat API (`https://shop.example.com`). A request from
-   * any other `Origin` is refused. `null` leaves it to Strapi's CORS settings.
-   */
-  allowedOrigins: string[] | null;
 }
 
 /** The plugin's options: Strapi 5 keeps them under `plugin::aparte-desk`, Strapi 4 under `plugin.aparte-desk`. */
@@ -64,7 +59,6 @@ export const defaults: DeskConfig = {
     read: 'Read by {name}',
   },
   maxMessageLength: 4000,
-  allowedOrigins: null,
 };
 
 export default {
@@ -82,9 +76,6 @@ export default {
     }
     if (config.maxMessageLength !== undefined && !(Number.isInteger(config.maxMessageLength) && config.maxMessageLength > 0)) {
       throw new Error('aparte-desk: `maxMessageLength` must be a positive integer.');
-    }
-    if (config.allowedOrigins != null && !Array.isArray(config.allowedOrigins)) {
-      throw new Error('aparte-desk: `allowedOrigins` must be a list of origins, or null.');
     }
   },
 };
