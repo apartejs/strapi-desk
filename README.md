@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset=".github/desk-strapi-dark.svg">
+    <img src=".github/desk-strapi-light.svg" alt="aparté Desk for Strapi" width="96" height="96">
+  </picture>
+</p>
+
 # aparté Desk for Strapi
 
 Your team takes over the AI chat's conversations from the Strapi admin.
