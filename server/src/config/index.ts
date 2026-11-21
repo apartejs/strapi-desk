@@ -50,6 +50,10 @@ export interface DeskConfig {
   allowedOrigins: string[] | null;
 }
 
+/** The plugin's options: Strapi 5 keeps them under `plugin::aparte-desk`, Strapi 4 under `plugin.aparte-desk`. */
+export const deskConfig = (strapi: { config: { get: (path: string) => unknown } }): DeskConfig =>
+  (strapi.config.get('plugin::aparte-desk') ?? strapi.config.get('plugin.aparte-desk')) as DeskConfig;
+
 export const defaults: DeskConfig = {
   assistant: null,
   notices: {

@@ -1,6 +1,7 @@
 import type { Core } from '@strapi/strapi';
-import type { AssistantConfig, DeskConfig } from '../config';
+import { deskConfig, type AssistantConfig, type DeskConfig } from '../config';
 import { MESSAGE, type Conversation, type Message } from './desk';
+import { postJson } from './post-json';
 
 /** The tool the model calls to hand the conversation to the team. Its name is the model's protocol: English. */
 export const HAND_OFF_TOOL = 'ask_for_someone';
@@ -50,7 +51,7 @@ const reasonOf = (raw: string | undefined): string => {
  * conversation to the team. One request, no stream: the reply reaches the chat as a message.
  */
 const assistant = ({ strapi }: { strapi: Core.Strapi }) => {
-  const settings = (): AssistantConfig | null => (strapi.config.get('plugin::aparte-desk') as DeskConfig).assistant;
+  const settings = (): AssistantConfig | null => deskConfig(strapi).assistant;
   const desk = () => strapi.plugin('aparte-desk').service('desk');
 
   return {
@@ -59,13 +60,10 @@ const assistant = ({ strapi }: { strapi: Core.Strapi }) => {
         options.instructions || 'You are the assistant of this website. Answer the visitor briefly, in their language.',
         `You can hand the conversation to a person of the team with the ${HAND_OFF_TOOL} tool. ${options.handOffWhen || DEFAULT_HAND_OFF}`,
       ].join('\n\n');
-      const response = await fetch(`${options.baseUrl.replace(/\/+$/, '')}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(options.apiKey ? { Authorization: `Bearer ${options.apiKey}` } : {}),
-        },
-        body: JSON.stringify({
+      const response = await postJson(
+        `${options.baseUrl.replace(/\/+$/, '')}/chat/completions`,
+        { 'Content-Type': 'application/json', ...(options.apiKey ? { Authorization: `Bearer ${options.apiKey}` } : {}) },
+        {
           model: options.model,
           messages: [{ role: 'system', content: system }, ...history],
           tools: [
@@ -82,14 +80,11 @@ const assistant = ({ strapi }: { strapi: Core.Strapi }) => {
               },
             },
           ],
-        }),
-        signal: AbortSignal.timeout(options.timeoutMs ?? 60_000),
-      });
-      if (!response.ok) {
-        const body = await response.text().catch(() => '');
-        throw new Error(`The assistant's API answered ${response.status}: ${body.slice(0, 300)}`);
-      }
-      const completion = (await response.json()) as Completion;
+        },
+        options.timeoutMs ?? 60_000
+      );
+      if (!response.ok) throw new Error(`The assistant's API answered ${response.status}: ${response.text.slice(0, 300)}`);
+      const completion = JSON.parse(response.text) as Completion;
       const message = completion.choices?.[0]?.message;
       const call = message?.tool_calls?.find((tool) => tool.function?.name === HAND_OFF_TOOL);
       return { text: (message?.content ?? '').trim(), handOff: call ? reasonOf(call.function?.arguments) || 'The assistant asked for someone of the team' : null };

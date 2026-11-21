@@ -4,7 +4,7 @@
  */
 const open = { auth: false as const, policies: [] };
 
-export default () => ({
+export default {
   type: 'content-api',
   routes: [
     { method: 'POST', path: '/conversations', handler: 'chat.open', config: open },
@@ -14,4 +14,4 @@ export default () => ({
     { method: 'POST', path: '/conversations/:id/typing', handler: 'chat.typing', config: open },
     { method: 'GET', path: '/conversations/:id/events', handler: 'chat.events', config: open },
   ],
-});
+};

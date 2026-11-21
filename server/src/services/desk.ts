@@ -1,6 +1,6 @@
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import type { Core } from '@strapi/strapi';
-import type { DeskConfig } from '../config';
+import { deskConfig, type DeskConfig } from '../config';
 import type { Change, PublicMessage, PublicState } from './hub';
 
 export const CONVERSATION = 'plugin::aparte-desk.conversation';
@@ -81,7 +81,7 @@ const fill = (words: string, values: Record<string, string>) =>
   words.replace(/\{(\w+)\}/g, (all, key) => values[key] ?? all);
 
 const desk = ({ strapi }: { strapi: Core.Strapi }) => {
-  const config = (): DeskConfig => strapi.config.get('plugin::aparte-desk') as DeskConfig;
+  const config = (): DeskConfig => deskConfig(strapi);
   const conversations = () => strapi.db.query(CONVERSATION);
   const messages = () => strapi.db.query(MESSAGE);
   const hub = () => strapi.plugin('aparte-desk').service('hub');

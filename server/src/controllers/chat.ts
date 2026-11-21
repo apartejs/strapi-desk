@@ -1,6 +1,6 @@
 import { PassThrough } from 'node:stream';
 import type { Core } from '@strapi/strapi';
-import type { DeskConfig } from '../config';
+import { deskConfig, type DeskConfig } from '../config';
 import { DeskError, type Conversation } from '../services/desk';
 import type { Change } from '../services/hub';
 
@@ -11,7 +11,7 @@ import type { Change } from '../services/hub';
  * a header to).
  */
 const chat = ({ strapi }: { strapi: Core.Strapi }) => {
-  const config = () => strapi.config.get('plugin::aparte-desk') as DeskConfig;
+  const config = () => deskConfig(strapi);
   const desk = () => strapi.plugin('aparte-desk').service('desk');
   const hub = () => strapi.plugin('aparte-desk').service('hub');
   const assistant = () => strapi.plugin('aparte-desk').service('assistant');
