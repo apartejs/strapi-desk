@@ -1,0 +1,96 @@
+{
+  "name": "@aparte/strapi-desk",
+  "version": "0.1.0",
+  "description": "aparté Desk for Strapi: your team takes over the AI chat's conversations from the Strapi admin.",
+  "keywords": [
+    "strapi",
+    "strapi-plugin",
+    "support",
+    "live-chat",
+    "helpdesk",
+    "ai",
+    "aparte"
+  ],
+  "license": "MIT",
+  "author": "Paul Richez",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/apartejs/strapi-desk.git"
+  },
+  "type": "commonjs",
+  "exports": {
+    "./package.json": "./package.json",
+    "./strapi-admin": {
+      "types": "./dist/admin/src/index.d.ts",
+      "source": "./admin/src/index.ts",
+      "import": "./dist/admin/index.mjs",
+      "require": "./dist/admin/index.js",
+      "default": "./dist/admin/index.js"
+    },
+    "./strapi-server": {
+      "types": "./dist/server/src/index.d.ts",
+      "source": "./server/src/index.ts",
+      "import": "./dist/server/index.mjs",
+      "require": "./dist/server/index.js",
+      "default": "./dist/server/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "build": "strapi-plugin build",
+    "watch": "strapi-plugin watch",
+    "watch:link": "strapi-plugin watch:link",
+    "verify": "strapi-plugin verify",
+    "test:ts:front": "tsc -p admin/tsconfig.json",
+    "test:ts:back": "tsc -p server/tsconfig.json",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@strapi/design-system": "^2.3.1",
+    "@strapi/icons": "^2.3.1",
+    "@strapi/sdk-plugin": "^6.1.1",
+    "@strapi/strapi": "^5.63.0",
+    "@strapi/types": "5.63.0",
+    "@strapi/typescript-utils": "^5.63.0",
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
+    "better-sqlite3": "12.8.0",
+    "prettier": "^3.10.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-intl": "^6.8.9",
+    "react-router-dom": "^6.30.6",
+    "styled-components": "^6.6.0",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  },
+  "peerDependencies": {
+    "@strapi/design-system": "^2.0.0",
+    "@strapi/icons": "^2.0.0",
+    "@strapi/sdk-plugin": "^6.1.1",
+    "@strapi/strapi": "^5.0.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-intl": "^6.8.9",
+    "react-router-dom": "^6.30.6",
+    "styled-components": "^6.6.0"
+  },
+  "strapi": {
+    "kind": "plugin",
+    "name": "aparte-desk",
+    "displayName": "aparté Desk",
+    "description": "Your team takes over the AI chat's conversations from the admin."
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "better-sqlite3",
+      "esbuild",
+      "@swc/core"
+    ]
+  }
+}
