@@ -53,8 +53,7 @@ form.addEventListener('submit', async (event) => {
   localStorage.setItem(SESSION, JSON.stringify(session));
   form.reset();
   showSession();
-  // The conversation goes on, and is the account's from now on.
-  await desk.refresh();
+  // Nothing to tell the desk: the next message brings the JWT, and the conversation is the account's.
 });
 
 document.querySelector('#sign-out').addEventListener('click', () => {

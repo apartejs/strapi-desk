@@ -46,8 +46,10 @@ async function readEvents(response, on) {
 
 /**
  * Binds `chat` (an `<aparte-chat>`) to the desk at `api` (`https://cms.example.com/api/aparte-desk`).
- * `jwt()` gives the JWT of the user signed in on the site, or null for a guest. Call `refresh()`
- * once the user signs in or out. `onState` hears who answers and who the visitor is.
+ * `jwt()` gives the JWT of the user signed in on the site, or null for a guest: every request
+ * sends it, as any request to Strapi does, and nothing else is called when the user signs in.
+ * The desk ties the conversation to the account on the first request that brings it.
+ * `onState` hears who answers and who the desk sees.
  */
 export function connectDesk(chat, { api, jwt, onState = () => {} }) {
   aparteGlobalConfig.setAutoReply(false);
@@ -85,7 +87,7 @@ export function connectDesk(chat, { api, jwt, onState = () => {} }) {
       .then((response) =>
         readEvents(response, (type, change) => {
           if (type === 'message') show(change.message);
-          if (type === 'state' || type === 'ready') onState({ ...change.state, visitor: conversation?.visitor ?? null });
+          if (type === 'state' || type === 'ready') onState(change.state);
           if (type === 'read') for (const id of change.ids) viewport()?.updateMessage(id, { note: change.note });
         })
       )
@@ -97,9 +99,8 @@ export function connectDesk(chat, { api, jwt, onState = () => {} }) {
     if (!conversation) return onState({ state: 'assistant', holder: null, visitor: null });
     try {
       const current = await call(`/${conversation.id}`);
-      conversation = { ...conversation, visitor: current.visitor ?? null };
       viewport()?.setMessages(current.messages.map(toChat));
-      onState({ ...current, visitor: conversation.visitor });
+      onState(current);
       listen();
     } catch {
       // Closed for good, or a token the desk no longer knows: a new conversation starts at the next message.
@@ -123,7 +124,7 @@ export function connectDesk(chat, { api, jwt, onState = () => {} }) {
         const answer = await call(`/${conversation.id}/messages`, { method: 'POST', body: JSON.stringify({ id: messageId, text: content }) });
         show(answer.notice);
         show(answer.reply);
-        onState({ state: answer.state, holder: answer.holder, visitor: conversation.visitor ?? null });
+        onState(answer);
       } catch (error) {
         console.warn('The message did not reach the desk.', error);
       }
@@ -134,8 +135,6 @@ export function connectDesk(chat, { api, jwt, onState = () => {} }) {
   void load();
 
   return {
-    /** The user signed in or out: the conversation goes on, and becomes theirs when they sign in. */
-    refresh: load,
     /** A new conversation, for a user who signs out. */
     forget() {
       listening?.abort();

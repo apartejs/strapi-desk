@@ -133,16 +133,19 @@ module.exports = [
 
 | Request | Answer |
 |---|---|
-| `POST /conversations` `{ visitor?: { name, email }, context?: {…} }` | `201 { id, token, state, holder, assistant }` |
-| `GET /conversations/:id` (`?after=<message id>`) | `{ state, holder, visitor: { name, signedIn }, messages }` |
-| `POST /conversations/:id/messages` `{ text, id? }` | `{ message, reply, notice, state, holder }` |
-| `POST /conversations/:id/human` | `{ notice, state, holder }` |
+| `POST /conversations` `{ visitor?: { name, email }, context?: {…} }` | `201 { id, token, state, holder, visitor, assistant }` |
+| `GET /conversations/:id` (`?after=<message id>`) | `{ state, holder, visitor, messages }` |
+| `POST /conversations/:id/messages` `{ text, id? }` | `{ message, reply, notice, state, holder, visitor }` |
+| `POST /conversations/:id/human` | `{ notice, state, holder, visitor }` |
 | `POST /conversations/:id/typing` | `204` |
 | `GET /conversations/:id/events` | server-sent events |
 
 - `state` is `assistant`, `wanted` (waiting for the team), `held` (someone of the team answers) or
   `closed`. A message written in a closed conversation opens it again.
 - `holder` is `{ name }` while someone holds the conversation, else `null`.
+- `visitor` is `{ name, signedIn }`: who the desk sees. `signedIn` turns true on the first request
+  that brings a user's JWT, with nothing else to call: a guest who signs in on your site is the
+  account's from then on, and the team reads that they signed in.
 - `reply` is the assistant's answer, when it answered. `notice` is an event to show in the chat:
   "Someone of the team will answer you here…", "Marie joined the conversation"…
 - A message is `{ id, from, text, event?, author?, createdAt, readBy? }`, where `from` is

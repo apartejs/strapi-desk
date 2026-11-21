@@ -27,6 +27,7 @@
   "events.held": "{name} took it over",
   "events.assigned": "{by} assigned it to {name}",
   "events.back": "{by} handed it back to the assistant",
+  "events.signed_in": "The visitor signed in as {name}",
   "events.closed": "Closed by {by}",
   "read_by": "Read by {name}",
   "note.label": "Note by {name}",

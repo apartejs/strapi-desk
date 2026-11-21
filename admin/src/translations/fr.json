@@ -27,6 +27,7 @@
   "events.held": "{name} a pris la conversation",
   "events.assigned": "{by} l'a confiée à {name}",
   "events.back": "{by} l'a rendue à l'assistant",
+  "events.signed_in": "Le visiteur s'est connecté en tant que {name}",
   "events.closed": "Fermée par {by}",
   "read_by": "Lu par {name}",
   "note.label": "Note de {name}",

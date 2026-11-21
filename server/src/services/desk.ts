@@ -104,6 +104,7 @@ const desk = ({ strapi }: { strapi: Core.Strapi }) => {
   const publicState = (conversation: Conversation): PublicState => ({
     state: conversation.state,
     holder: conversation.state === 'held' && conversation.holder ? { name: memberName(conversation.holder) } : null,
+    visitor: { name: conversation.visitorName ?? null, signedIn: conversation.visitorUserId != null },
   });
 
   /** What the visitor's chat shows of a message. An event shows its notice; one with no notice shows nothing. */
@@ -193,7 +194,10 @@ const desk = ({ strapi }: { strapi: Core.Strapi }) => {
      */
     async claim(conversation: Conversation, account: { id: number; name: string | null; email: string | null }): Promise<Conversation> {
       if (conversation.visitorUserId != null) return conversation;
-      return update(conversation, { visitorUserId: account.id, visitorName: account.name?.slice(0, 200) || null, visitorEmail: account.email || null });
+      const current = await update(conversation, { visitorUserId: account.id, visitorName: account.name?.slice(0, 200) || null, visitorEmail: account.email || null });
+      // A line for the team, where it happened: an event without text, which the visitor's chat never reads.
+      await record(current, { from: 'event', event: 'signed-in', meta: { name: current.visitorName ?? current.visitorEmail ?? '' } });
+      return current;
     },
 
     /** The conversation of this signed-in user, or null: a site's user reaches theirs by their account. */

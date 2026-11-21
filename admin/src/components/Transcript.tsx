@@ -22,6 +22,8 @@ const useEventLine = () => {
         return t('events.back', { by: meta.by ?? '' });
       case 'closed':
         return t('events.closed', { by: meta.by ?? '' });
+      case 'signed-in':
+        return t('events.signed_in', { name: meta.name ?? '' });
       default:
         return message.text;
     }

@@ -59,6 +59,8 @@ describe('with an assistant', () => {
     await chat.write('Where is my order?');
     const shown = await (await marie.get(`/conversations/${chat.id}`)).json();
     expect(shown.visitor).toMatchObject({ name: 'lea', email: 'lea@shop.example.com', userId: lea.id });
+    // Signed in from the start: nothing changed hands, nothing to say.
+    expect(shown.messages.some((m: { event: string | null }) => m.event === 'signed-in')).toBe(false);
   });
 
   it('lets a signed-in user reach their conversation by their account, and no one else', async () => {
@@ -81,7 +83,14 @@ describe('with an assistant', () => {
     // Theirs from now on: the account alone reaches it, and another account signing in takes it from no one.
     const seen = await fetch(guest.url(), { headers: { Authorization: `Bearer ${zoe.jwt}` } });
     expect(seen.status).toBe(200);
-    expect((await seen.json()).visitor).toEqual({ name: 'zoe', signedIn: true });
+    const shown = await seen.json();
+    expect(shown.visitor).toEqual({ name: 'zoe', signedIn: true });
+    // Said to the team, once, where it happened; never to the visitor.
+    expect(shown.messages.some((m: { event?: string }) => m.event === 'signed-in')).toBe(false);
+    const desk = (await (await marie.get(`/conversations/${guest.id}`)).json()).messages;
+    expect(desk.filter((m: { event: string | null }) => m.event === 'signed-in')).toEqual([expect.objectContaining({ from: 'event', meta: { name: 'zoe' } })]);
+    const events = desk.map((m: { event: string | null; text: string }) => m.event ?? m.text);
+    expect(events.indexOf('signed-in')).toBe(events.indexOf('Now I am signed in') - 1);
     const other = await siteUser(app, { username: 'other2', email: 'other2@shop.example.com' });
     await fetch(guest.url(), { headers: { ...guest.headers, Authorization: `Bearer ${other.jwt}` } });
     expect((await (await marie.get(`/conversations/${guest.id}`)).json()).visitor).toMatchObject({ userId: zoe.id });

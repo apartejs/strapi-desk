@@ -102,9 +102,7 @@ const chat = ({ strapi }: { strapi: Core.Strapi }) => {
       const conversation = await conversationOf(ctx);
       if (!conversation) return;
       const after = typeof ctx.query.after === 'string' ? ctx.query.after : undefined;
-      // Who the desk sees: a guest, or the account the conversation is tied to.
-      const visitor = { name: conversation.visitorName ?? null, signedIn: conversation.visitorUserId != null };
-      ctx.body = { ...desk().publicState(conversation), visitor, messages: await desk().transcript(conversation, after) };
+      ctx.body = { ...desk().publicState(conversation), messages: await desk().transcript(conversation, after) };
     },
 
     async write(ctx) {
