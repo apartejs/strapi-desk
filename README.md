@@ -134,7 +134,7 @@ module.exports = [
 | Request | Answer |
 |---|---|
 | `POST /conversations` `{ visitor?: { name, email }, context?: {…} }` | `201 { id, token, state, holder, assistant }` |
-| `GET /conversations/:id` (`?after=<message id>`) | `{ state, holder, messages }` |
+| `GET /conversations/:id` (`?after=<message id>`) | `{ state, holder, visitor: { name, signedIn }, messages }` |
 | `POST /conversations/:id/messages` `{ text, id? }` | `{ message, reply, notice, state, holder }` |
 | `POST /conversations/:id/human` | `{ notice, state, holder }` |
 | `POST /conversations/:id/typing` | `204` |
@@ -193,6 +193,9 @@ listen((type, event) => {
 
 const { reply, notice } = await write('Where is my order?');
 ```
+
+A whole page, with aparté's chat in a corner and a sign-in that turns the guest into the
+account, is in [`example/`](example/).
 
 ## Limits
 

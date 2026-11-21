@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Desk example shop</title>
+    <style>
+      [hidden] {
+        display: none !important;
+      }
+      body {
+        margin: 0;
+        font: 16px/1.5 system-ui, sans-serif;
+        background: var(--aparte-bg);
+        color: var(--aparte-text);
+      }
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 32px;
+        border-bottom: 1px solid var(--aparte-border);
+      }
+      header strong {
+        font-size: 18px;
+      }
+      main {
+        max-width: 640px;
+        padding: 48px 32px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 32px;
+      }
+      .account {
+        display: grid;
+        gap: 12px;
+        margin-top: 32px;
+        padding: 24px;
+        border: 1px solid var(--aparte-border);
+        border-radius: 12px;
+        background: var(--aparte-surface-1);
+      }
+      .account form {
+        display: grid;
+        gap: 12px;
+      }
+      .account label {
+        display: grid;
+        gap: 4px;
+        font-size: 14px;
+      }
+      .error {
+        color: var(--aparte-danger, #c62828);
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <strong>Example shop</strong>
+      <span id="who">Guest</span>
+    </header>
+    <main>
+      <h1>Hello</h1>
+      <p>
+        The chat in the corner talks to aparté Desk in Strapi. Write in it as a guest, sign in below,
+        and the conversation becomes the account's, in the desk too.
+      </p>
+
+      <section class="account" aria-labelledby="account-title">
+        <h2 id="account-title" style="margin: 0; font-size: 20px">Your account</h2>
+        <form id="sign-in">
+          <label>Email or username <input class="aparte-field" name="identifier" autocomplete="username" required /></label>
+          <label>Password <input class="aparte-field" name="password" type="password" autocomplete="current-password" required /></label>
+          <button class="aparte-btn aparte-btn--primary aparte-btn--solid aparte-btn--lg" type="submit">Sign in</button>
+          <p class="error" id="error" hidden></p>
+        </form>
+        <div id="signed-in" hidden>
+          <p style="margin: 0">Signed in as <strong id="name"></strong>.</p>
+          <button class="aparte-btn aparte-btn--surface" id="sign-out" type="button">Sign out</button>
+        </div>
+      </section>
+    </main>
+
+    <aparte-launcher label="Help" heading="Example shop" subheading="You are a guest" open>
+      <aparte-chat></aparte-chat>
+    </aparte-launcher>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
