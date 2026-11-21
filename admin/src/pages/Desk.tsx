@@ -1,5 +1,5 @@
-import { Box, Button, EmptyStateLayout, Flex } from '@strapi/design-system';
-import { Bell, Message } from '@strapi/icons';
+import { Button, Flex, Typography } from '@strapi/design-system';
+import { Bell, Lightning, Message } from '@strapi/icons';
 import { Layouts, Page, useAuth, useFetchClient } from '@strapi/strapi/admin';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -7,6 +7,7 @@ import { BASE, usePolled, type Row, type SavedReply, type Tab } from '../api';
 import { ConversationList } from '../components/ConversationList';
 import { ConversationView } from '../components/ConversationView';
 import { SavedReplies } from '../components/SavedReplies';
+import { Avatar, Column, Panel } from '../components/ui';
 import { useWords } from '../components/words';
 import { PLUGIN_ID } from '../pluginId';
 
@@ -67,6 +68,7 @@ export const Desk = () => {
   }, [get, loadSaved]);
 
   const open = (next: string) => navigate(`/plugins/${PLUGIN_ID}/${encodeURIComponent(next)}`);
+  const back = () => navigate(`/plugins/${PLUGIN_ID}`);
   const refresh = () => {
     void list.reload();
     void counts.reload();
@@ -76,7 +78,8 @@ export const Desk = () => {
     <Page.Main>
       <Page.Title>{t('plugin.name')}</Page.Title>
       <Layouts.Header
-        title={t('plugin.name')}
+        title={t('page.title')}
+        subtitle={t('page.subtitle')}
         primaryAction={
           <Flex gap={2}>
             {canNotify ? (
@@ -88,28 +91,35 @@ export const Desk = () => {
                 {t('browser.enable')}
               </Button>
             ) : null}
-            <Button variant="secondary" startIcon={<Message />} onClick={() => setSavedOpen(true)}>
+            <Button variant="secondary" startIcon={<Lightning />} onClick={() => setSavedOpen(true)}>
               {t('saved.many')}
             </Button>
           </Flex>
         }
       />
       <Layouts.Content>
-        <Flex alignItems="stretch" gap={4} style={{ height: 'calc(100vh - 13rem)', minHeight: '28rem' }}>
-          <Box width="25rem" style={{ flexShrink: 0, minWidth: 0 }}>
+        <Panel data-open={id ? 'true' : 'false'}>
+          <Column $border="end" data-list-column>
             <ConversationList tab={tab} onTab={setTab} q={q} onSearch={setQ} rows={list.data?.results ?? null} counts={counts.data} open={id ?? null} onOpen={open} me={me} />
-          </Box>
-          <Box flex="1" minWidth={0}>
-            {id ? (
-              <ConversationView key={id} id={id} me={me} hasAssistant={hasAssistant} savedReplies={savedReplies} onChanged={refresh} onOpen={open} />
-            ) : (
-              <EmptyStateLayout
-                icon={<Message width="6rem" height="6rem" />}
-                content={list.data?.results.length === 0 && tab === 'all' && !q ? t('empty.description') : t('pick')}
-              />
-            )}
-          </Box>
-        </Flex>
+          </Column>
+          {id ? (
+            <ConversationView key={id} id={id} me={me} hasAssistant={hasAssistant} savedReplies={savedReplies} onChanged={refresh} onOpen={open} onBack={back} />
+          ) : (
+            <Column data-center-column>
+              <Flex direction="column" justifyContent="center" alignItems="center" gap={3} flex="1" padding={8}>
+                <Avatar $size={56} $tone="primary" aria-hidden>
+                  <Message />
+                </Avatar>
+                <Typography variant="delta" tag="p">
+                  {list.data?.results.length === 0 && tab === 'all' && !q ? t('empty.heading') : t('pick.title')}
+                </Typography>
+                <Typography textColor="neutral600" tag="p" textAlign="center">
+                  {list.data?.results.length === 0 && tab === 'all' && !q ? t('empty.description') : t('pick')}
+                </Typography>
+              </Flex>
+            </Column>
+          )}
+        </Panel>
       </Layouts.Content>
       <SavedReplies open={savedOpen} onOpenChange={setSavedOpen} replies={savedReplies} onChanged={() => void loadSaved()} />
     </Page.Main>

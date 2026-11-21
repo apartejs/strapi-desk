@@ -1,6 +1,7 @@
-import { Badge, Box, Flex, Searchbar, Tabs, Typography } from '@strapi/design-system';
+import { Box, Flex, Loader, Searchbar, Typography } from '@strapi/design-system';
+import { Archive, Bell, Sparkle, User } from '@strapi/icons';
 import type { Row, Tab } from '../api';
-import { StateChip } from './StateChip';
+import { Avatar, Count, Meta, Reason, RowButton, Scroll, Segment, Segmented, initials } from './ui';
 import { useWords } from './words';
 
 interface Props {
@@ -15,91 +16,124 @@ interface Props {
   me: number | null;
 }
 
-const TABS: Tab[] = ['wanted', 'mine', 'waiting', 'all'];
+const TABS: Tab[] = ['wanted', 'mine', 'all'];
 
-/** The conversations on the left, as in a support inbox: tabs, a search, one row each. */
+/** Under the last message: why it waits, who holds it, or that the assistant answers. */
+const RowMeta = ({ row, me }: { row: Row; me: number | null }) => {
+  const { t } = useWords();
+  if (row.state === 'wanted') {
+    return (
+      <Reason $tone="warning" title={row.wanted?.reason ?? undefined}>
+        <Bell aria-hidden />
+        <span>{row.wanted?.reason || t('chip.wanted')}</span>
+      </Reason>
+    );
+  }
+  if (row.state === 'held') {
+    return (
+      <Flex justifyContent="space-between" gap={2} width="100%">
+        <Meta $tone={row.holder?.id === me ? 'success' : 'neutral'}>
+          <User aria-hidden />
+          <span>{row.holder?.id === me ? t('chip.yours') : (row.holder?.name ?? '')}</span>
+        </Meta>
+        {row.waiting ? <Meta $tone="danger">{t('waiting')}</Meta> : null}
+      </Flex>
+    );
+  }
+  if (row.state === 'closed') {
+    return (
+      <Meta>
+        <Archive aria-hidden />
+        <span>{t('chip.closed')}</span>
+      </Meta>
+    );
+  }
+  return (
+    <Meta>
+      <Sparkle aria-hidden />
+      <span>{t('assistant')}</span>
+    </Meta>
+  );
+};
+
+/** The conversations, as in a support inbox: tabs, a search, one row each. */
 export const ConversationList = ({ tab, onTab, q, onSearch, rows, counts, open, onOpen, me }: Props) => {
-  const { t, when } = useWords();
+  const { t, ago } = useWords();
   const count = (which: Tab) => (which === 'wanted' ? counts?.wanted : which === 'mine' ? counts?.mine : undefined);
-
-  const empty = q ? t('no_match') : tab === 'wanted' ? t('empty.wanted') : tab === 'mine' ? t('empty.mine') : t('empty.heading');
+  const empty = q ? t('no_match') : tab === 'wanted' ? t('empty.wanted') : tab === 'mine' ? t('empty.mine') : t('empty.description');
 
   return (
-    <Flex direction="column" alignItems="stretch" gap={3} height="100%">
-      <Tabs.Root value={tab} onValueChange={(value: string) => onTab(value as Tab)}>
-        <Tabs.List aria-label={t('plugin.name')} style={{ overflowX: 'auto', overflowY: 'hidden' }}>
+    <>
+      <Flex direction="column" alignItems="stretch" gap={3} padding={4}>
+        <Segmented role="tablist" aria-label={t('plugin.name')}>
           {TABS.map((which) => (
-            <Tabs.Trigger key={which} value={which} style={{ whiteSpace: 'nowrap', paddingInline: '0.75rem' }}>
-              <Flex gap={1}>
-                {t(`tabs.${which}`)}
-                {count(which) ? <Badge active>{count(which)}</Badge> : null}
-              </Flex>
-            </Tabs.Trigger>
+            <Segment key={which} type="button" role="tab" aria-selected={tab === which} $active={tab === which} onClick={() => onTab(which)}>
+              {t(`tabs.${which}`)}
+              {count(which) ? <Count $strong={which === 'wanted'}>{count(which)}</Count> : null}
+            </Segment>
           ))}
-        </Tabs.List>
-      </Tabs.Root>
-      <Searchbar
-        name="q"
-        value={q}
-        onChange={(event: React.ChangeEvent<HTMLInputElement>) => onSearch(event.target.value)}
-        onClear={() => onSearch('')}
-        clearLabel={t('actions.cancel')}
-        placeholder={t('search')}
-      >
-        {t('search')}
-      </Searchbar>
-      <Box overflow="auto" flex="1" background="neutral0" hasRadius shadow="tableShadow">
-        {rows && rows.length === 0 ? (
+        </Segmented>
+        <Searchbar
+          name="q"
+          size="S"
+          value={q}
+          onChange={(event: React.ChangeEvent<HTMLInputElement>) => onSearch(event.target.value)}
+          onClear={() => onSearch('')}
+          clearLabel={t('actions.cancel')}
+          placeholder={t('search')}
+        >
+          {t('search')}
+        </Searchbar>
+      </Flex>
+      <Box borderColor="neutral150" style={{ borderTopWidth: 1, borderTopStyle: 'solid' }} />
+      <Scroll>
+        {rows === null ? (
+          <Flex justifyContent="center" padding={6}>
+            <Loader small />
+          </Flex>
+        ) : rows.length === 0 ? (
           <Box padding={6}>
-            <Typography textColor="neutral600">{empty}</Typography>
+            <Typography variant="omega" textColor="neutral500" tag="p" textAlign="center">
+              {empty}
+            </Typography>
           </Box>
-        ) : null}
-        <Box tag="ul">
-          {(rows ?? []).map((row) => (
-            <Box tag="li" key={row.id} borderColor="neutral150" style={{ borderBottomWidth: 1, borderBottomStyle: 'solid' }}>
-              <Box
-                tag="button"
-                type="button"
-                onClick={() => onOpen(row.id)}
-                aria-current={row.id === open ? 'true' : undefined}
-                padding={3}
-                width="100%"
-                background={row.id === open ? 'primary100' : 'neutral0'}
-                style={{ textAlign: 'start', cursor: 'pointer', border: 0, display: 'block' }}
-                data-conversation={row.id}
-              >
-                <Flex justifyContent="space-between" gap={2}>
-                  <Typography fontWeight="bold" ellipsis>
-                    {row.visitor.name || row.visitor.email || t('visitor.guest')}
-                  </Typography>
-                  <Typography variant="pi" textColor="neutral600" style={{ whiteSpace: 'nowrap' }}>
-                    {when(row.lastMessageAt ?? row.createdAt)}
-                  </Typography>
-                </Flex>
-                <Box paddingTop={1}>
-                  <Typography variant="omega" textColor="neutral800" ellipsis tag="p">
-                    {row.title || row.lastMessage || ''}
-                  </Typography>
-                </Box>
-                {row.lastMessage && row.lastMessage !== row.title ? (
-                  <Typography variant="pi" textColor="neutral600" ellipsis tag="p">
-                    {row.lastFrom === 'visitor' ? '' : `${row.lastFrom === 'assistant' ? t('assistant') : (row.holder?.name ?? '')} · `}
-                    {row.lastMessage}
-                  </Typography>
-                ) : null}
-                <Flex gap={2} paddingTop={2} wrap="wrap">
-                  <StateChip row={row} me={me} />
-                  {row.waiting ? (
-                    <Badge backgroundColor="danger100" textColor="danger700">
-                      {t('waiting')}
-                    </Badge>
-                  ) : null}
-                </Flex>
-              </Box>
-            </Box>
-          ))}
-        </Box>
-      </Box>
-    </Flex>
+        ) : (
+          <ul>
+            {rows.map((row) => {
+              const name = row.visitor.name || row.visitor.email || t('visitor.guest');
+              const at = row.lastMessageAt ?? row.createdAt;
+              return (
+                <li key={row.id}>
+                  <RowButton type="button" $active={row.id === open} aria-current={row.id === open ? 'true' : undefined} onClick={() => onOpen(row.id)} data-conversation={row.id}>
+                    <Avatar $size={36}>{initials(name)}</Avatar>
+                    <Flex direction="column" alignItems="stretch" gap={1} flex="1" minWidth={0}>
+                      <Flex justifyContent="space-between" gap={2}>
+                        <Typography fontWeight="bold" textColor="neutral800" ellipsis>
+                          {name}
+                        </Typography>
+                        <Typography
+                          variant="pi"
+                          fontWeight={row.waiting || row.state === 'wanted' ? 'bold' : undefined}
+                          textColor={row.waiting || row.state === 'wanted' ? 'danger600' : 'neutral500'}
+                          style={{ whiteSpace: 'nowrap' }}
+                        >
+                          {ago(at)}
+                        </Typography>
+                      </Flex>
+                      <Typography variant="omega" textColor="neutral700" ellipsis>
+                        {row.lastMessage || row.title || ''}
+                      </Typography>
+                      <Box paddingTop={1}>
+                        <RowMeta row={row} me={me} />
+                      </Box>
+                    </Flex>
+                  </RowButton>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </Scroll>
+    </>
   );
 };
