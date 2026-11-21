@@ -1,0 +1,20 @@
+{
+  "kind": "collectionType",
+  "collectionName": "aparte_desk_notes",
+  "info": {
+    "singularName": "note",
+    "pluralName": "notes",
+    "displayName": "Desk note"
+  },
+  "options": { "draftAndPublish": false },
+  "pluginOptions": {
+    "content-manager": { "visible": false },
+    "content-type-builder": { "visible": false }
+  },
+  "attributes": {
+    "conversation": { "type": "relation", "relation": "manyToOne", "target": "plugin::aparte-desk.conversation", "inversedBy": "notes" },
+    "text": { "type": "text", "required": true },
+    "author": { "type": "relation", "relation": "manyToOne", "target": "admin::user" },
+    "authorName": { "type": "string", "maxLength": 200 }
+  }
+}

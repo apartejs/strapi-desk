@@ -1,0 +1,18 @@
+{
+  "kind": "collectionType",
+  "collectionName": "aparte_desk_saved_replies",
+  "info": {
+    "singularName": "saved-reply",
+    "pluralName": "saved-replies",
+    "displayName": "Desk saved reply"
+  },
+  "options": { "draftAndPublish": false },
+  "pluginOptions": {
+    "content-manager": { "visible": false },
+    "content-type-builder": { "visible": false }
+  },
+  "attributes": {
+    "title": { "type": "string", "required": true, "maxLength": 120 },
+    "text": { "type": "text", "required": true }
+  }
+}

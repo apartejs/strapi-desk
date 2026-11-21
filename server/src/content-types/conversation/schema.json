@@ -1,0 +1,114 @@
+{
+  "kind": "collectionType",
+  "collectionName": "aparte_desk_conversations",
+  "info": {
+    "singularName": "conversation",
+    "pluralName": "conversations",
+    "displayName": "Desk conversation"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {
+    "content-manager": {
+      "visible": false
+    },
+    "content-type-builder": {
+      "visible": false
+    }
+  },
+  "attributes": {
+    "uid": {
+      "type": "string",
+      "required": true,
+      "unique": true,
+      "maxLength": 64
+    },
+    "tokenHash": {
+      "type": "string",
+      "private": true,
+      "maxLength": 64
+    },
+    "title": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "state": {
+      "type": "enumeration",
+      "enum": [
+        "assistant",
+        "wanted",
+        "held",
+        "closed"
+      ],
+      "default": "assistant",
+      "required": true
+    },
+    "holder": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "admin::user"
+    },
+    "wantedReason": {
+      "type": "string",
+      "maxLength": 300
+    },
+    "wantedSource": {
+      "type": "enumeration",
+      "enum": [
+        "tool",
+        "visitor",
+        "message"
+      ]
+    },
+    "wantedAt": {
+      "type": "datetime"
+    },
+    "takenAt": {
+      "type": "datetime"
+    },
+    "closedAt": {
+      "type": "datetime"
+    },
+    "lastMessageAt": {
+      "type": "datetime"
+    },
+    "lastMessage": {
+      "type": "string",
+      "maxLength": 300
+    },
+    "lastFrom": {
+      "type": "enumeration",
+      "enum": [
+        "visitor",
+        "assistant",
+        "team"
+      ]
+    },
+    "visitorName": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "visitorEmail": {
+      "type": "email"
+    },
+    "visitorUserId": {
+      "type": "integer"
+    },
+    "context": {
+      "type": "json"
+    },
+    "messages": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "plugin::aparte-desk.message",
+      "mappedBy": "conversation"
+    },
+    "notes": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "plugin::aparte-desk.note",
+      "mappedBy": "conversation"
+    }
+  }
+}

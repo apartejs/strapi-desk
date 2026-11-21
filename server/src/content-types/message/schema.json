@@ -1,0 +1,70 @@
+{
+  "kind": "collectionType",
+  "collectionName": "aparte_desk_messages",
+  "info": {
+    "singularName": "message",
+    "pluralName": "messages",
+    "displayName": "Desk message"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {
+    "content-manager": {
+      "visible": false
+    },
+    "content-type-builder": {
+      "visible": false
+    }
+  },
+  "attributes": {
+    "uid": {
+      "type": "string",
+      "required": true,
+      "unique": true,
+      "maxLength": 64
+    },
+    "conversation": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::aparte-desk.conversation",
+      "inversedBy": "messages"
+    },
+    "from": {
+      "type": "enumeration",
+      "enum": [
+        "visitor",
+        "assistant",
+        "team",
+        "event"
+      ],
+      "required": true
+    },
+    "text": {
+      "type": "text"
+    },
+    "event": {
+      "type": "string",
+      "maxLength": 40
+    },
+    "author": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "admin::user"
+    },
+    "authorName": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "readByName": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "readAt": {
+      "type": "datetime"
+    },
+    "meta": {
+      "type": "json"
+    }
+  }
+}
