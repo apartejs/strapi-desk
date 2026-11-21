@@ -1,26 +1,28 @@
-/** The desk's routes, for whoever may use it: a signed-in admin whose role has "Use the desk". */
-const desk = {
-  policies: ['admin::isAuthenticatedAdmin', { name: 'admin::hasPermissions', config: { actions: ['plugin::aparte-desk.use'] } }],
-};
+import { policies, type Can } from '../../permissions';
 
-export default () => ({
+/** The desk's routes: each one for a signed-in admin whose role allows what it does. */
+const route = (method: string, path: string, handler: string, can: Can) => ({ method, path, handler: `admin.${handler}`, config: { policies: policies(can) } });
+
+// An object, not a function: Strapi 4 reads a plugin's routers as objects.
+export default {
   type: 'admin',
   routes: [
-    { method: 'GET', path: '/settings', handler: 'admin.settings', config: desk },
-    { method: 'GET', path: '/conversations', handler: 'admin.list', config: desk },
-    { method: 'GET', path: '/counts', handler: 'admin.counts', config: desk },
-    { method: 'GET', path: '/team', handler: 'admin.team', config: desk },
-    { method: 'GET', path: '/conversations/:id', handler: 'admin.show', config: desk },
-    { method: 'POST', path: '/conversations/:id/take', handler: 'admin.take', config: desk },
-    { method: 'POST', path: '/conversations/:id/hand-back', handler: 'admin.handBack', config: desk },
-    { method: 'POST', path: '/conversations/:id/close', handler: 'admin.close', config: desk },
-    { method: 'POST', path: '/conversations/:id/assign', handler: 'admin.assign', config: desk },
-    { method: 'POST', path: '/conversations/:id/messages', handler: 'admin.reply', config: desk },
-    { method: 'POST', path: '/conversations/:id/notes', handler: 'admin.note', config: desk },
-    { method: 'POST', path: '/conversations/:id/typing', handler: 'admin.typing', config: desk },
-    { method: 'GET', path: '/saved-replies', handler: 'admin.savedReplies', config: desk },
-    { method: 'POST', path: '/saved-replies', handler: 'admin.createSavedReply', config: desk },
-    { method: 'PUT', path: '/saved-replies/:id', handler: 'admin.updateSavedReply', config: desk },
-    { method: 'DELETE', path: '/saved-replies/:id', handler: 'admin.deleteSavedReply', config: desk },
+    route('GET', '/me', 'me', 'read'),
+    route('GET', '/settings', 'settings', 'read'),
+    route('GET', '/conversations', 'list', 'read'),
+    route('GET', '/counts', 'counts', 'read'),
+    route('GET', '/conversations/:id', 'show', 'read'),
+    route('GET', '/saved-replies', 'savedReplies', 'read'),
+    route('POST', '/conversations/:id/take', 'take', 'answer'),
+    route('POST', '/conversations/:id/hand-back', 'handBack', 'answer'),
+    route('POST', '/conversations/:id/messages', 'reply', 'answer'),
+    route('POST', '/conversations/:id/notes', 'note', 'answer'),
+    route('POST', '/conversations/:id/typing', 'typing', 'answer'),
+    route('GET', '/team', 'team', 'assign'),
+    route('POST', '/conversations/:id/assign', 'assign', 'assign'),
+    route('POST', '/conversations/:id/close', 'close', 'close'),
+    route('POST', '/saved-replies', 'createSavedReply', 'savedReplies'),
+    route('PUT', '/saved-replies/:id', 'updateSavedReply', 'savedReplies'),
+    route('DELETE', '/saved-replies/:id', 'deleteSavedReply', 'savedReplies'),
   ],
-});
+};
