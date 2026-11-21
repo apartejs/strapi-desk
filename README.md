@@ -30,7 +30,8 @@ the assistant, or closes it.
 
 It works with any chat widget: the plugin is a small HTTP API, described below.
 
-Strapi 5. Node 20 or later.
+Strapi 4 and Strapi 5, one package for both: tested on the first and the last release of each,
+4.0, 4.26, 5.0 and the latest 5, each on the Node it runs on (Strapi 4.0 runs on Node 16).
 
 ## Install
 
@@ -43,9 +44,9 @@ npm install @aparte/strapi-desk
 Until then, build it from this repository (`npm install && npm run build`) and point your app at
 the folder with `resolve: '/path/to/strapi-desk'` in the plugin's entry below.
 
-```ts
-// config/plugins.ts
-export default ({ env }) => ({
+```js
+// config/plugins.js (config/plugins.ts in a TypeScript app)
+module.exports = ({ env }) => ({
   'aparte-desk': {
     enabled: true,
     config: {
@@ -61,8 +62,23 @@ export default ({ env }) => ({
 ```
 
 Then `npm run build` and restart. **aparté Desk** appears in the admin's menu for super admins.
-To give it to other roles, tick **Plugins › aparté Desk › Use the desk** in
-*Settings › Administration panel › Roles*.
+
+## Who may do what
+
+The desk has five permissions, under **Plugins › aparté Desk** in a role of
+*Settings › Administration panel › Roles*. The server checks them on every request, and the desk
+shows only the buttons a role may use.
+
+| Permission | What it allows |
+|---|---|
+| See the conversations | The desk in the menu, the conversations, the visitor and the team's notes. |
+| Take over and answer | Take a conversation over, answer the visitor, write a note, hand it back to the assistant. |
+| Assign to a colleague | Give a conversation to someone of the team. |
+| Close | Close a conversation. |
+| Manage the saved replies | Write, change and delete the saved replies (every role that sees the desk may use them). |
+
+A conversation can be assigned only to someone who may take conversations over and answer.
+Super admins may do everything.
 
 ## Options
 
@@ -152,7 +168,17 @@ pnpm build
 pnpm test        # boots a real Strapi on SQLite, with a fake OpenAI-compatible API
 ```
 
-The tests load the plugin's `dist`: build before testing.
+The tests load the plugin's `dist`: build before testing. They run on the Strapi of this
+repository's dev dependencies; to run them on another version, make an app of that version with
+the plugin installed from its package, as a user installs it:
+
+```sh
+DESK_NODE=/path/to/node16/bin/node node scripts/strapi-app.mjs 4.0.0
+DESK_APP=.apps/strapi-4.0.0 DESK_NODE=/path/to/node16/bin/node pnpm test
+```
+
+`DESK_NODE` is the Node that runs that Strapi (the tests themselves need Node 20 or later). The
+CI runs the suite this way on 4.0.0, 4.26.2, 5.0.0 and the latest Strapi 5.
 
 ## Licence
 
