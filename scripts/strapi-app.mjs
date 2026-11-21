@@ -71,6 +71,8 @@ writeFileSync(
       version: '0.0.0',
       dependencies: {
         '@strapi/strapi': version,
+        // Every new app has it: the site's users, whose JWT the chat reads.
+        '@strapi/plugin-users-permissions': version,
         // The SQLite driver, at a version built for that Node: better-sqlite3, and sqlite3 for
         // the first releases of Strapi 4, whose "sqlite" client was knex's sqlite3.
         'better-sqlite3': nodeMajor <= 16 ? '8.7.0' : '11.10.0',

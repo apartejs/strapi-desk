@@ -187,6 +187,13 @@ const desk = ({ strapi }: { strapi: Core.Strapi }) => {
       return load(uid);
     },
 
+    /** The conversation of this signed-in user, or null: a site's user reaches theirs by their account. */
+    async ownedBy(uid: string, userId: number): Promise<Conversation | null> {
+      if (typeof uid !== 'string') return null;
+      const conversation: Conversation | null = await conversations().findOne({ where: { uid, visitorUserId: userId }, select: ['id'] });
+      return conversation ? load(uid) : null;
+    },
+
     /** The messages the visitor's chat shows, oldest first. */
     async transcript(conversation: Conversation, after?: string): Promise<PublicMessage[]> {
       let since: string | undefined;

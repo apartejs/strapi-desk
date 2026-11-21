@@ -8,6 +8,9 @@ importers:
 
   .:
     devDependencies:
+      '@strapi/plugin-users-permissions':
+        specifier: 5.63.0
+        version: 5.63.0(632445499bdbec0d29c05971bf3ea7cf)
       '@strapi/sdk-plugin':
         specifier: ^6.1.1
         version: 6.1.1(@types/node@26.6.6)(jiti@2.7.0)(lightningcss@1.32.0)(rollup@4.68.8)(terser@5.51.4)
@@ -2414,6 +2417,17 @@ packages:
   '@strapi/permissions@5.63.0':
     resolution: {integrity: sha512-opyXzPUaKlGBUEZrOPnoVKXbXzpx98cZIEskhaEo8NZccWTxBcnBR16ou3sbsE+LNpZYqUR+PyKn7bQ3/AgBPQ==}
     engines: {node: '>=22.0.0 <=26.x.x', npm: '>=6.0.0'}
+
+  '@strapi/plugin-users-permissions@5.63.0':
+    resolution: {integrity: sha512-sIw6BVsZKXDt3C79LBBr8nnXHqwlFTgJjE6whFd29l2eg2opNyt6OswYIJp8cY0A+yOJGyxxvqVGUa6L8qlkFA==}
+    engines: {node: '>=22.0.0 <=26.x.x', npm: '>=6.0.0'}
+    peerDependencies:
+      '@strapi/admin': ^5.0.0
+      '@strapi/strapi': ^5.0.0
+      react: ^18.0.0
+      react-dom: ^18.0.0
+      react-router-dom: ^6.30.3
+      styled-components: ^6.0.0
 
   '@strapi/provider-email-sendmail@5.63.0':
     resolution: {integrity: sha512-6IvNdL2oAokU1zDh7d7XlMvmJ8VkiJ9rNxblr+IIErUM5e9sgHQgGegCN8eVmZv0I7WwnQnRv5lJaAVjyrD/NQ==}
@@ -6961,6 +6975,9 @@ packages:
   uri-js@4.4.1:
     resolution: {integrity: sha512-7rKUyy33Q1yc98pQ1DAmLtwX109F7TIfWlW1Ydo8Wl1ii1SeHieeh0HHfPeL2fMXK6z0s8ecKs9frCuLJvndBg==}
 
+  url-join@4.0.1:
+    resolution: {integrity: sha512-jk1+QP6ZJqyOiuEI9AEWQfju/nB2Pw466kbA0LEZljHwKeMgd9WrAEgEGxjPDD2+TNbbb37rTyhEfrCXfuKXnA==}
+
   use-callback-ref@1.3.3:
     resolution: {integrity: sha512-jQL3lRnocaFtu3V00JToYz/4QkNWswxijDaCVNZRiRTO3HQDLsdu1ZtmIUvV4yPp+rvWm5j0y0TG/S61cuijTg==}
     engines: {node: '>=10'}
@@ -7689,8 +7706,8 @@ snapshots:
   '@codemirror/commands@6.11.1':
     dependencies:
       '@codemirror/language': 6.13.1
-      '@codemirror/state': 6.7.1
-      '@codemirror/view': 6.43.0
+      '@codemirror/state': 6.7.6
+      '@codemirror/view': 6.43.15
       '@lezer/common': 1.5.6
 
   '@codemirror/lang-json@6.0.1':
@@ -7700,9 +7717,9 @@ snapshots:
 
   '@codemirror/language@6.13.1':
     dependencies:
-      '@codemirror/state': 6.7.1
+      '@codemirror/state': 6.7.6
       '@codemirror/streamparser': 6.0.0
-      '@codemirror/view': 6.43.0
+      '@codemirror/view': 6.43.15
       '@lezer/common': 1.5.6
       '@lezer/highlight': 1.2.5
       '@lezer/lr': 1.4.12
@@ -7739,7 +7756,7 @@ snapshots:
 
   '@codemirror/view@6.43.0':
     dependencies:
-      '@codemirror/state': 6.7.1
+      '@codemirror/state': 6.7.6
       crelt: 1.0.7
       style-mod: 4.1.5
       w3c-keyname: 2.2.8
@@ -8922,7 +8939,7 @@ snapshots:
 
   '@radix-ui/react-popper@1.2.1(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:
-      '@floating-ui/react-dom': 2.1.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@floating-ui/react-dom': 2.1.9(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@radix-ui/react-arrow': 1.1.1(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@radix-ui/react-compose-refs': 1.1.1(@types/react@18.3.31)(react@18.3.1)
       '@radix-ui/react-context': 1.1.1(@types/react@18.3.31)(react@18.3.1)
@@ -10170,6 +10187,52 @@ snapshots:
       sift: 16.0.1
     transitivePeerDependencies:
       - ts-toolbelt
+
+  '@strapi/plugin-users-permissions@5.63.0(632445499bdbec0d29c05971bf3ea7cf)':
+    dependencies:
+      '@strapi/admin': 5.63.0(@babel/runtime@7.29.15)(@codemirror/autocomplete@6.20.4)(@codemirror/language@6.13.1)(@codemirror/lint@6.9.8)(@codemirror/search@6.7.2)(@codemirror/theme-one-dark@6.1.3)(@emotion/is-prop-valid@1.4.0)(@strapi/data-transfer@5.63.0(@types/koa@2.15.2)(@types/node@26.6.6)(better-sqlite3@12.8.0)(ts-toolbelt@9.6.0))(@types/hoist-non-react-statics@3.3.7(@types/react@18.3.31))(@types/koa@2.15.2)(@types/node@26.6.6)(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(better-sqlite3@12.8.0)(codemirror@5.65.21)(debug@4.3.4)(react-dom@18.3.1(react@18.3.1))(react-router-dom@6.30.6(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(redux@4.2.1)(styled-components@6.6.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(ts-toolbelt@9.6.0)
+      '@strapi/design-system': 2.3.1(@babel/runtime@7.29.15)(@codemirror/autocomplete@6.20.4)(@codemirror/language@6.13.1)(@codemirror/lint@6.9.8)(@codemirror/search@6.7.2)(@codemirror/theme-one-dark@6.1.3)(@strapi/icons@2.3.1(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(styled-components@6.6.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)))(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(codemirror@5.65.21)(date-fns@2.30.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(styled-components@6.6.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1))
+      '@strapi/icons': 2.3.1(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(styled-components@6.6.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1))
+      '@strapi/strapi': 5.63.0(@babel/runtime@7.29.15)(@codemirror/autocomplete@6.20.4)(@codemirror/language@6.13.1)(@codemirror/lint@6.9.8)(@codemirror/search@6.7.2)(@codemirror/theme-one-dark@6.1.3)(@emotion/is-prop-valid@1.4.0)(@swc/helpers@0.5.24)(@types/hoist-non-react-statics@3.3.7(@types/react@18.3.31))(@types/koa@2.15.2)(@types/node@26.6.6)(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(better-sqlite3@12.8.0)(codemirror@5.65.21)(date-fns@2.30.0)(esbuild@0.28.2)(jiti@2.7.0)(koa@2.16.4)(lightningcss@1.32.0)(react-dom@18.3.1(react@18.3.1))(react-router-dom@6.30.6(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(redux@4.2.1)(styled-components@6.6.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(terser@5.51.4)(ts-toolbelt@9.6.0)(type-fest@4.41.0)
+      '@strapi/utils': 5.63.0(ts-toolbelt@9.6.0)
+      bcryptjs: 2.4.3
+      formik: 2.4.9(@types/react@18.3.31)(react@18.3.1)
+      immer: 9.0.21
+      jsonwebtoken: 9.0.3
+      koa: 2.16.4
+      koa2-ratelimit: 1.1.3
+      lodash: 4.18.1
+      prop-types: 15.8.1
+      react: 18.3.1
+      react-dom: 18.3.1(react@18.3.1)
+      react-intl: 6.6.2(react@18.3.1)(typescript@5.9.3)
+      react-query: 3.39.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      react-redux: 8.1.3(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(redux@4.2.1)
+      react-router-dom: 6.30.6(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      styled-components: 6.6.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      url-join: 4.0.1
+      yup: 0.32.9
+      zod: 4.4.3
+    transitivePeerDependencies:
+      - '@babel/runtime'
+      - '@codemirror/autocomplete'
+      - '@codemirror/language'
+      - '@codemirror/lint'
+      - '@codemirror/search'
+      - '@codemirror/theme-one-dark'
+      - '@date-fns/tz'
+      - '@types/react'
+      - '@types/react-dom'
+      - codemirror
+      - date-fns
+      - mongoose
+      - react-native
+      - redis
+      - redux
+      - sequelize
+      - supports-color
+      - ts-toolbelt
+      - typescript
 
   '@strapi/provider-email-sendmail@5.63.0':
     dependencies:
@@ -11799,7 +11862,7 @@ snapshots:
       postcss-modules-scope: 3.2.1(postcss@8.5.32)
       postcss-modules-values: 4.0.0(postcss@8.5.32)
       postcss-value-parser: 4.2.0
-      semver: 7.7.4
+      semver: 7.8.6
     optionalDependencies:
       webpack: 5.109.2(esbuild@0.28.2)(lightningcss@1.32.0)(postcss@8.5.32)
 
@@ -12312,7 +12375,7 @@ snapshots:
       minimatch: 3.1.5
       node-abort-controller: 3.1.1
       schema-utils: 3.3.0
-      semver: 7.7.4
+      semver: 7.8.6
       tapable: 2.3.4
       typescript: 5.9.3
       webpack: 5.109.2(esbuild@0.28.2)(lightningcss@1.32.0)(postcss@8.5.32)
@@ -14099,7 +14162,7 @@ snapshots:
       cosmiconfig: 9.0.2(typescript@5.9.3)
       jiti: 2.7.0
       postcss: 8.5.32
-      semver: 7.7.4
+      semver: 7.8.6
     optionalDependencies:
       webpack: 5.109.2(esbuild@0.28.2)(lightningcss@1.32.0)(postcss@8.5.32)
     transitivePeerDependencies:
@@ -15253,6 +15316,8 @@ snapshots:
   uri-js@4.4.1:
     dependencies:
       punycode: 2.3.1
+
+  url-join@4.0.1: {}
 
   use-callback-ref@1.3.3(@types/react@18.3.31)(react@18.3.1):
     dependencies:

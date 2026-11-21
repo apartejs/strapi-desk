@@ -101,22 +101,32 @@ the team's, as "Marie: …"; it never reads the team's notes.
 
 ## The chat API
 
-Everything is under `/api/aparte-desk`, with no Strapi token: a conversation is reached with the
-token its opening gave, as `Authorization: Bearer <token>`. The token is given once; keep it where
-the widget keeps its conversation (for example `localStorage`). A wrong token answers 404, as if
-the conversation did not exist.
+Everything is under `/api/aparte-desk`, open to the visitors of your site. A visitor is either:
 
-Strapi's CORS lets a page of another site send `Authorization` as it comes. The token is also
-read from an `X-Desk-Token` header, but a page of another site may send that one only once you
-add it to the `headers` of `strapi::cors`.
+- **anonymous**: the conversation is reached with the token its opening gave, in the
+  `X-Desk-Token` header. The token is given once; keep it where the widget keeps its
+  conversation (for example `localStorage`). A wrong token answers 404, as if the conversation
+  did not exist.
+- **a user of your site, signed in** through Strapi's Users & Permissions: the widget sends that
+  user's JWT, as for the rest of your API, in `Authorization: Bearer <jwt>`. The conversation is
+  then tied to their account, with the name and email of the account (whatever the widget says),
+  and they reach it with their JWT alone. A JWT that is not valid, or a blocked user, answers 401.
 
-Which sites may call it is Strapi's own CORS setting, as for the rest of your API:
+The token is never read from the address. A page of another site may send `X-Desk-Token` once
+Strapi's CORS allows it: `headers` replaces Strapi's own list, so give it whole. `origin` says
+which sites may call the API, as for the rest of it.
 
 ```js
 // config/middlewares.js
 module.exports = [
   // …
-  { name: 'strapi::cors', config: { origin: ['https://shop.example.com'] } },
+  {
+    name: 'strapi::cors',
+    config: {
+      origin: ['https://shop.example.com'],
+      headers: ['Content-Type', 'Authorization', 'Origin', 'Accept', 'X-Desk-Token'],
+    },
+  },
   // …
 ];
 ```
@@ -128,7 +138,7 @@ module.exports = [
 | `POST /conversations/:id/messages` `{ text, id? }` | `{ message, reply, notice, state, holder }` |
 | `POST /conversations/:id/human` | `{ notice, state, holder }` |
 | `POST /conversations/:id/typing` | `204` |
-| `GET /conversations/:id/events?token=…` | server-sent events |
+| `GET /conversations/:id/events` | server-sent events |
 
 - `state` is `assistant`, `wanted` (waiting for the team), `held` (someone of the team answers) or
   `closed`. A message written in a closed conversation opens it again.
@@ -141,27 +151,45 @@ module.exports = [
   Flat values, at most 4 000 characters of JSON.
 
 The events stream sends `ready` first, then `message`, `state`, `typing` and `read` as the team
-acts. `EventSource` cannot send a header, hence the token in the query.
+acts. `EventSource` cannot send a header, so read it with `fetch`, as below (or a library such as
+`@microsoft/fetch-event-source`).
 
 ```js
 const api = 'https://cms.example.com/api/aparte-desk';
 
 const { id, token } = await (await fetch(`${api}/conversations`, {
   method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
+  headers: { 'Content-Type': 'application/json' }, // a signed-in user: Authorization: `Bearer ${jwt}`
   body: JSON.stringify({ visitor: { name: 'Léa' }, context: { page: location.pathname } }),
 })).json();
+const headers = { 'Content-Type': 'application/json', 'X-Desk-Token': token };
 
 const write = async (text) =>
-  (await fetch(`${api}/conversations/${id}/messages`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ text }),
-  })).json();
+  (await fetch(`${api}/conversations/${id}/messages`, { method: 'POST', headers, body: JSON.stringify({ text }) })).json();
 
-const events = new EventSource(`${api}/conversations/${id}/events?token=${token}`);
-events.addEventListener('message', (event) => show(JSON.parse(event.data).message));
-events.addEventListener('state', (event) => showState(JSON.parse(event.data).state));
+// The events: one `event: …` line and one `data: …` line each, a blank line between two.
+const listen = async (on) => {
+  const response = await fetch(`${api}/conversations/${id}/events`, { headers });
+  const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
+  let buffer = '';
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) return;
+    buffer += value;
+    let end;
+    while ((end = buffer.indexOf('\n\n')) >= 0) {
+      const block = buffer.slice(0, end);
+      buffer = buffer.slice(end + 2);
+      const type = /^event: (.*)$/m.exec(block)?.[1];
+      const data = /^data: (.*)$/m.exec(block)?.[1];
+      if (type && data) on(type, JSON.parse(data));
+    }
+  }
+};
+listen((type, event) => {
+  if (type === 'message') show(event.message);
+  if (type === 'state') showState(event.state);
+});
 
 const { reply, notice } = await write('Where is my order?');
 ```

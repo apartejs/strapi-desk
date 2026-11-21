@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { fakeModel, signIn, startStrapi, visitor } from './helpers';
+import { fakeModel, signIn, siteUser, startStrapi, visitor } from './helpers';
 
 type App = Awaited<ReturnType<typeof startStrapi>>;
 
@@ -30,32 +30,51 @@ describe('with an assistant', () => {
 
   it('refuses a conversation without its token, as if it did not exist', async () => {
     const chat = await visitor(app.base);
-    const wrong = await fetch(chat.url(), { headers: { Authorization: 'Bearer nope' } });
-    const wrongHeader = await fetch(chat.url(), { headers: { 'X-Desk-Token': 'nope' } });
+    const wrong = await fetch(chat.url(), { headers: { 'X-Desk-Token': 'nope' } });
+    const query = await fetch(`${chat.url()}?token=${chat.token}`);
     const none = await fetch(chat.url());
     expect(wrong.status).toBe(404);
-    expect(wrongHeader.status).toBe(404);
+    expect(query.status).toBe(404);
     expect(none.status).toBe(404);
   });
 
-  it('reads the token from X-Desk-Token too', async () => {
-    const chat = await visitor(app.base);
-    const read = await fetch(chat.url(), { headers: { 'X-Desk-Token': chat.token } });
-    expect(read.status).toBe(200);
-  });
-
-  it("lets a page of another site send its token through Strapi's default CORS", async () => {
+  it('lets a page of another site send X-Desk-Token, once CORS allows it as the README says', async () => {
     const chat = await visitor(app.base);
     const preflight = await fetch(chat.url('/messages'), {
       method: 'OPTIONS',
       headers: {
         Origin: 'https://shop.example.com',
         'Access-Control-Request-Method': 'POST',
-        'Access-Control-Request-Headers': 'authorization,content-type',
+        'Access-Control-Request-Headers': 'x-desk-token,authorization,content-type',
       },
     });
     const allowed = (preflight.headers.get('access-control-allow-headers') ?? '').toLowerCase().split(/\s*,\s*/);
-    expect(allowed).toEqual(expect.arrayContaining(['authorization', 'content-type']));
+    expect(allowed).toEqual(expect.arrayContaining(['x-desk-token', 'authorization', 'content-type']));
+  });
+
+  it("ties a signed-in user's conversation to their account, whatever the widget says", async () => {
+    const lea = await siteUser(app, { username: 'lea', email: 'lea@shop.example.com' });
+    const chat = await visitor(app.base, { visitor: { name: 'Someone else', email: 'else@example.com' } }, { jwt: lea.jwt });
+    expect(chat.status).toBe(201);
+    await chat.write('Where is my order?');
+    const shown = await (await marie.get(`/conversations/${chat.id}`)).json();
+    expect(shown.visitor).toMatchObject({ name: 'lea', email: 'lea@shop.example.com', userId: lea.id });
+  });
+
+  it('lets a signed-in user reach their conversation by their account, and no one else', async () => {
+    const paul = await siteUser(app, { username: 'paul', email: 'paul@shop.example.com' });
+    const other = await siteUser(app, { username: 'other', email: 'other@shop.example.com' });
+    const chat = await visitor(app.base, {}, { jwt: paul.jwt });
+    expect((await fetch(chat.url(), { headers: { Authorization: `Bearer ${paul.jwt}` } })).status).toBe(200);
+    expect((await fetch(chat.url(), { headers: { Authorization: `Bearer ${other.jwt}` } })).status).toBe(404);
+  });
+
+  it('refuses a JWT that is not valid, and a blocked user, as Strapi does', async () => {
+    const blocked = await siteUser(app, { username: 'blocked', email: 'blocked@shop.example.com', blocked: true });
+    const open = (authorization: string) =>
+      fetch(`${app.base}/api/aparte-desk/conversations`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: authorization }, body: '{}' });
+    expect((await open('Bearer not-a-jwt')).status).toBe(401);
+    expect((await open(`Bearer ${blocked.jwt}`)).status).toBe(401);
   });
 
   it('lets the assistant answer, and keeps both messages', async () => {
@@ -192,7 +211,7 @@ describe('with an assistant', () => {
     const chat = await visitor(app.base);
     await chat.human();
     const controller = new AbortController();
-    const response = await fetch(`${chat.url('/events')}?token=${chat.token}`, { signal: controller.signal });
+    const response = await fetch(chat.url('/events'), { headers: chat.headers, signal: controller.signal });
     expect(response.headers.get('content-type')).toContain('text/event-stream');
     const reader = response.body!.getReader();
     const decoder = new TextDecoder();

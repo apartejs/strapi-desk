@@ -61,6 +61,11 @@ export async function startStrapi({ assistant }: { assistant?: string } = {}) {
 
 type App = Awaited<ReturnType<typeof startStrapi>>;
 
+/** A user of the site, made in users-permissions, and the JWT its sign-in would give. */
+export async function siteUser(app: App, { username, email, blocked = false }: { username: string; email: string; blocked?: boolean }) {
+  return (await app.ask('siteUser', { username, email, blocked })) as { id: number; jwt: string };
+}
+
 /**
  * An admin of the panel, signed in: a super admin unless a role is given, Strapi's author role,
  * or a role of its own allowed only these actions of the desk (`read`, `answer`…).
@@ -85,15 +90,19 @@ export async function signIn(app: App, { email, firstname, role, can }: { email:
   };
 }
 
-/** A visitor's widget: opens a conversation, then speaks with its token. */
-export async function visitor(base: string, open: Record<string, unknown> = {}) {
+/**
+ * A visitor's widget: opens a conversation, then speaks with its token. Given a user's JWT, it
+ * is signed in as that user of the site, and sends no token but its JWT.
+ */
+export async function visitor(base: string, open: Record<string, unknown> = {}, { jwt }: { jwt?: string } = {}) {
+  const signedIn = jwt ? { Authorization: `Bearer ${jwt}` } : {};
   const response = await fetch(`${base}/api/aparte-desk/conversations`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...signedIn },
     body: JSON.stringify(open),
   });
   const opened = (await response.json()) as { id: string; token: string; state: string };
-  const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${opened.token}` };
+  const headers = { 'Content-Type': 'application/json', ...(jwt ? signedIn : { 'X-Desk-Token': opened.token }) };
   const url = (rest = '') => `${base}/api/aparte-desk/conversations/${opened.id}${rest}`;
   return {
     ...opened,
@@ -101,6 +110,7 @@ export async function visitor(base: string, open: Record<string, unknown> = {}) 
     write: async (text: string) => (await fetch(url('/messages'), { method: 'POST', headers, body: JSON.stringify({ text }) })).json() as Promise<any>,
     human: async () => (await fetch(url('/human'), { method: 'POST', headers })).json() as Promise<any>,
     read: async () => (await fetch(url(), { headers })).json() as Promise<any>,
+    headers,
     url,
   };
 }

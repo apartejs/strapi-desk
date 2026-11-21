@@ -49,6 +49,15 @@ async function main() {
       await strapi.service('admin::user').create({ email, firstname, lastname: 'Test', password: 'Password123!', isActive: true, roles: [roleId] });
       return { password: 'Password123!' };
     },
+    /** A user of the site (users-permissions), and the JWT it signs in with. */
+    async siteUser({ username, email, blocked }) {
+      const role = await strapi.db.query('plugin::users-permissions.role').findOne({ where: { type: 'authenticated' } });
+      const user = await strapi.db.query('plugin::users-permissions.user').create({
+        data: { username, email, provider: 'local', confirmed: true, blocked, role: role && role.id },
+      });
+      const jwt = await strapi.plugin('users-permissions').service('jwt').issue({ id: user.id });
+      return { id: user.id, jwt };
+    },
     async stop() {
       await strapi.destroy();
       setImmediate(() => process.exit(0));
