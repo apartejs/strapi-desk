@@ -102,9 +102,13 @@ the team's, as "Marie: …"; it never reads the team's notes.
 ## The chat API
 
 Everything is under `/api/aparte-desk`, with no Strapi token: a conversation is reached with the
-token its opening gave, in the `X-Desk-Token` header. The token is given once; keep it where the
-widget keeps its conversation (for example `localStorage`). A wrong token answers 404, as if the
-conversation did not exist.
+token its opening gave, as `Authorization: Bearer <token>`. The token is given once; keep it where
+the widget keeps its conversation (for example `localStorage`). A wrong token answers 404, as if
+the conversation did not exist.
+
+Strapi's CORS lets a page of another site send `Authorization` as it comes. The token is also
+read from an `X-Desk-Token` header, but a page of another site may send that one only once you
+add it to the `headers` of `strapi::cors`.
 
 Which sites may call it is Strapi's own CORS setting, as for the rest of your API:
 
@@ -151,7 +155,7 @@ const { id, token } = await (await fetch(`${api}/conversations`, {
 const write = async (text) =>
   (await fetch(`${api}/conversations/${id}/messages`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Desk-Token': token },
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body: JSON.stringify({ text }),
   })).json();
 

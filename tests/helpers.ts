@@ -93,7 +93,7 @@ export async function visitor(base: string, open: Record<string, unknown> = {}) 
     body: JSON.stringify(open),
   });
   const opened = (await response.json()) as { id: string; token: string; state: string };
-  const headers = { 'Content-Type': 'application/json', 'X-Desk-Token': opened.token };
+  const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${opened.token}` };
   const url = (rest = '') => `${base}/api/aparte-desk/conversations/${opened.id}${rest}`;
   return {
     ...opened,

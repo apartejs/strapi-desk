@@ -7,9 +7,18 @@ import type { Change } from '../services/hub';
 /**
  * The chat API, for any widget on the site: open a conversation, write in it, ask for a person,
  * and hear what the team does. A conversation is reached with the token its opening gave, in
- * the `X-Desk-Token` header (or `?token=` for the events stream, which `EventSource` cannot give
- * a header to).
+ * `Authorization: Bearer …` (or `X-Desk-Token`, or `?token=` for the events stream, which
+ * `EventSource` cannot give a header to).
  */
+
+/**
+ * The token a request gives. `Authorization` comes first because Strapi's CORS lets a page of
+ * another site send it out of the box, where `X-Desk-Token` must be added to its `headers`.
+ */
+const tokenOf = (ctx, queryToken: boolean): string => {
+  const bearer = /^Bearer\s+(\S+)$/i.exec(ctx.get('authorization'))?.[1];
+  return bearer || ctx.get('x-desk-token') || (queryToken ? String(ctx.query.token ?? '') : '');
+};
 const chat = ({ strapi }: { strapi: Core.Strapi }) => {
   const config = () => deskConfig(strapi);
   const desk = () => strapi.plugin('aparte-desk').service('desk');
@@ -17,7 +26,7 @@ const chat = ({ strapi }: { strapi: Core.Strapi }) => {
   const assistant = () => strapi.plugin('aparte-desk').service('assistant');
 
   const conversationOf = async (ctx, { queryToken = false } = {}): Promise<Conversation | null> => {
-    const token = ctx.get('x-desk-token') || (queryToken ? String(ctx.query.token ?? '') : '');
+    const token = tokenOf(ctx, queryToken);
     const conversation = await desk().authenticate(ctx.params.id, token);
     if (!conversation) {
       ctx.status = 404;

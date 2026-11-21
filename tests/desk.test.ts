@@ -30,10 +30,32 @@ describe('with an assistant', () => {
 
   it('refuses a conversation without its token, as if it did not exist', async () => {
     const chat = await visitor(app.base);
-    const wrong = await fetch(chat.url(), { headers: { 'X-Desk-Token': 'nope' } });
+    const wrong = await fetch(chat.url(), { headers: { Authorization: 'Bearer nope' } });
+    const wrongHeader = await fetch(chat.url(), { headers: { 'X-Desk-Token': 'nope' } });
     const none = await fetch(chat.url());
     expect(wrong.status).toBe(404);
+    expect(wrongHeader.status).toBe(404);
     expect(none.status).toBe(404);
+  });
+
+  it('reads the token from X-Desk-Token too', async () => {
+    const chat = await visitor(app.base);
+    const read = await fetch(chat.url(), { headers: { 'X-Desk-Token': chat.token } });
+    expect(read.status).toBe(200);
+  });
+
+  it("lets a page of another site send its token through Strapi's default CORS", async () => {
+    const chat = await visitor(app.base);
+    const preflight = await fetch(chat.url('/messages'), {
+      method: 'OPTIONS',
+      headers: {
+        Origin: 'https://shop.example.com',
+        'Access-Control-Request-Method': 'POST',
+        'Access-Control-Request-Headers': 'authorization,content-type',
+      },
+    });
+    const allowed = (preflight.headers.get('access-control-allow-headers') ?? '').toLowerCase().split(/\s*,\s*/);
+    expect(allowed).toEqual(expect.arrayContaining(['authorization', 'content-type']));
   });
 
   it('lets the assistant answer, and keeps both messages', async () => {
