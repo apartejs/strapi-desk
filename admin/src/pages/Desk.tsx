@@ -84,7 +84,9 @@ export const Desk = () => {
       .then(({ data }) => setMe(data))
       .catch(() => toast(t('error')));
     void loadSaved().catch(() => {});
-  }, [loadSaved, toast, t]);
+    // Once, as the page opens: `t` is a new function at every render, and with it here the page
+    // asked again at every render, a hundred times a second.
+  }, []);
 
   const refresh = () => {
     void list.reload();
