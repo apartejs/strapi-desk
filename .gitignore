@@ -145,3 +145,9 @@ tests/app/.strapi-updater.json
 tests/app/database/
 tests/app/.strapi/
 tests/app/types/
+
+############################
+# Strapi apps of each version (scripts/strapi-app.mjs)
+############################
+
+.apps/

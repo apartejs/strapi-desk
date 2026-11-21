@@ -12,8 +12,8 @@ describe('with an assistant', () => {
   beforeAll(async () => {
     model = await fakeModel();
     app = await startStrapi({ assistant: model.url });
-    marie = await signIn(app.strapi, app.base, { email: 'marie@example.com', firstname: 'Marie' });
-    jean = await signIn(app.strapi, app.base, { email: 'jean@example.com', firstname: 'Jean' });
+    marie = await signIn(app, { email: 'marie@example.com', firstname: 'Marie' });
+    jean = await signIn(app, { email: 'jean@example.com', firstname: 'Jean' });
   });
 
   afterAll(async () => {
@@ -188,7 +188,7 @@ describe('with an assistant', () => {
   });
 
   it('keeps the desk to whoever may use it', async () => {
-    const author = await signIn(app.strapi, app.base, { email: 'author@example.com', firstname: 'Ann', role: 'author' });
+    const author = await signIn(app, { email: 'author@example.com', firstname: 'Ann', role: 'author' });
     expect((await author.get('/conversations')).status).toBe(403);
     const anonymous = await fetch(`${app.base}/aparte-desk/conversations`);
     expect(anonymous.status).toBe(401);
@@ -201,7 +201,7 @@ describe('with the team only', () => {
 
   beforeAll(async () => {
     app = await startStrapi();
-    marie = await signIn(app.strapi, app.base, { email: 'marie@example.com', firstname: 'Marie' });
+    marie = await signIn(app, { email: 'marie@example.com', firstname: 'Marie' });
   });
 
   afterAll(async () => {
@@ -224,5 +224,54 @@ describe('with the team only', () => {
     await marie.post(`/conversations/${chat.id}/take`);
     expect((await marie.post(`/conversations/${chat.id}/hand-back`)).status).toBe(409);
     expect(await (await marie.get('/settings')).json()).toEqual({ assistant: false });
+  });
+});
+
+describe('the rights of each role', () => {
+  let app: App;
+  let reader: Awaited<ReturnType<typeof signIn>>;
+  let agent: Awaited<ReturnType<typeof signIn>>;
+  let lead: Awaited<ReturnType<typeof signIn>>;
+
+  beforeAll(async () => {
+    app = await startStrapi();
+    lead = await signIn(app, { email: 'lead@example.com', firstname: 'Lea' });
+    reader = await signIn(app, { email: 'reader@example.com', firstname: 'Rita', can: ['read'] });
+    agent = await signIn(app, { email: 'agent@example.com', firstname: 'Alex', can: ['read', 'answer'] });
+  });
+
+  afterAll(async () => {
+    await app?.stop();
+  });
+
+  it('tells the panel what each one may do', async () => {
+    expect(await (await reader.get('/me')).json()).toMatchObject({ can: { read: true, answer: false, assign: false, close: false, savedReplies: false } });
+    expect(await (await agent.get('/me')).json()).toMatchObject({ can: { read: true, answer: true, assign: false, close: false, savedReplies: false } });
+    expect(await (await lead.get('/me')).json()).toMatchObject({ can: { read: true, answer: true, assign: true, close: true, savedReplies: true } });
+  });
+
+  it('lets a reader read, and nothing more', async () => {
+    const chat = await visitor(app.base);
+    await chat.write('Where is my order?');
+    expect((await reader.get(`/conversations/${chat.id}`)).status).toBe(200);
+    expect((await reader.post(`/conversations/${chat.id}/take`)).status).toBe(403);
+    expect((await reader.post(`/conversations/${chat.id}/notes`, { text: 'hm' })).status).toBe(403);
+    expect((await reader.post(`/conversations/${chat.id}/close`)).status).toBe(403);
+    expect((await reader.post('/saved-replies', { title: 'hi', text: 'Hello!' })).status).toBe(403);
+    expect((await reader.get('/saved-replies')).status).toBe(200);
+  });
+
+  it('lets an agent take over and answer, but not assign nor close', async () => {
+    const chat = await visitor(app.base);
+    await chat.write('I need help');
+    expect((await agent.post(`/conversations/${chat.id}/take`)).status).toBe(200);
+    expect((await agent.post(`/conversations/${chat.id}/messages`, { text: 'Here I am.' })).status).toBe(200);
+    expect((await agent.get('/team')).status).toBe(403);
+    expect((await agent.post(`/conversations/${chat.id}/close`)).status).toBe(403);
+  });
+
+  it('assigns only to someone who may answer', async () => {
+    const team = (await (await lead.get('/team')).json()).results as { name: string }[];
+    expect(team.map((member) => member.name).sort()).toEqual(['Alex Test', 'Lea Test']);
   });
 });
