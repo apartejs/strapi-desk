@@ -69,6 +69,24 @@ describe('with an assistant', () => {
     expect((await fetch(chat.url(), { headers: { Authorization: `Bearer ${other.jwt}` } })).status).toBe(404);
   });
 
+  it('gives a guest\'s conversation to the user who signs in while it goes on', async () => {
+    const guest = await visitor(app.base);
+    await guest.write('I cannot find my order');
+    expect((await (await marie.get(`/conversations/${guest.id}`)).json()).visitor).toMatchObject({ name: null, userId: null });
+    const zoe = await siteUser(app, { username: 'zoe', email: 'zoe@shop.example.com' });
+    const signedIn = { ...guest.headers, Authorization: `Bearer ${zoe.jwt}` };
+    const written = await fetch(guest.url('/messages'), { method: 'POST', headers: signedIn, body: JSON.stringify({ text: 'Now I am signed in' }) });
+    expect(written.status).toBe(200);
+    expect((await (await marie.get(`/conversations/${guest.id}`)).json()).visitor).toMatchObject({ name: 'zoe', email: 'zoe@shop.example.com', userId: zoe.id });
+    // Theirs from now on: the account alone reaches it, and another account signing in takes it from no one.
+    const seen = await fetch(guest.url(), { headers: { Authorization: `Bearer ${zoe.jwt}` } });
+    expect(seen.status).toBe(200);
+    expect((await seen.json()).visitor).toEqual({ name: 'zoe', signedIn: true });
+    const other = await siteUser(app, { username: 'other2', email: 'other2@shop.example.com' });
+    await fetch(guest.url(), { headers: { ...guest.headers, Authorization: `Bearer ${other.jwt}` } });
+    expect((await (await marie.get(`/conversations/${guest.id}`)).json()).visitor).toMatchObject({ userId: zoe.id });
+  });
+
   it('refuses a JWT that is not valid, and a blocked user, as Strapi does', async () => {
     const blocked = await siteUser(app, { username: 'blocked', email: 'blocked@shop.example.com', blocked: true });
     const open = (authorization: string) =>

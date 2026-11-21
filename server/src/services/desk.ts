@@ -187,6 +187,15 @@ const desk = ({ strapi }: { strapi: Core.Strapi }) => {
       return load(uid);
     },
 
+    /**
+     * A guest's conversation, taken by the user who signs in on the site while it goes on: it is
+     * theirs from now on, under the name and email of their account.
+     */
+    async claim(conversation: Conversation, account: { id: number; name: string | null; email: string | null }): Promise<Conversation> {
+      if (conversation.visitorUserId != null) return conversation;
+      return update(conversation, { visitorUserId: account.id, visitorName: account.name?.slice(0, 200) || null, visitorEmail: account.email || null });
+    },
+
     /** The conversation of this signed-in user, or null: a site's user reaches theirs by their account. */
     async ownedBy(uid: string, userId: number): Promise<Conversation | null> {
       if (typeof uid !== 'string') return null;

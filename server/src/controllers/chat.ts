@@ -11,7 +11,8 @@ import type { Change } from '../services/hub';
  * A visitor is anonymous, or a user of the site signed in through Strapi's users-permissions:
  * the widget then sends that user's JWT in `Authorization: Bearer …`, the conversation is theirs,
  * with the name and email of their account, and they reach it by that account. An anonymous
- * visitor reaches a conversation with the token its opening gave, in the `X-Desk-Token` header.
+ * visitor reaches a conversation with the token its opening gave, in the `X-Desk-Token` header;
+ * a guest who signs in while it goes on sends both, and the conversation becomes theirs.
  */
 type Account = { id: number; name: string | null; email: string | null };
 
@@ -53,7 +54,9 @@ const chat = ({ strapi }: { strapi: Core.Strapi }) => {
     const account = await accountOf(ctx);
     if (account === undefined) return null;
     const token = ctx.get('x-desk-token');
-    const conversation = (token ? await desk().authenticate(ctx.params.id, token) : null) ?? (account ? await desk().ownedBy(ctx.params.id, account.id) : null);
+    const opened = token ? await desk().authenticate(ctx.params.id, token) : null;
+    if (opened) return account ? desk().claim(opened, account) : opened;
+    const conversation = account ? await desk().ownedBy(ctx.params.id, account.id) : null;
     if (!conversation) refuse(ctx, 404, 'No conversation for this id and token.');
     return conversation;
   };
@@ -99,7 +102,9 @@ const chat = ({ strapi }: { strapi: Core.Strapi }) => {
       const conversation = await conversationOf(ctx);
       if (!conversation) return;
       const after = typeof ctx.query.after === 'string' ? ctx.query.after : undefined;
-      ctx.body = { ...desk().publicState(conversation), messages: await desk().transcript(conversation, after) };
+      // Who the desk sees: a guest, or the account the conversation is tied to.
+      const visitor = { name: conversation.visitorName ?? null, signedIn: conversation.visitorUserId != null };
+      ctx.body = { ...desk().publicState(conversation), visitor, messages: await desk().transcript(conversation, after) };
     },
 
     async write(ctx) {
