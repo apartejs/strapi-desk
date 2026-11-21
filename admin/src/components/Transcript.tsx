@@ -1,8 +1,7 @@
-import { Box, Flex, Typography } from '@strapi/design-system';
-import { Check, Lock, Sparkle } from '@strapi/icons';
 import { Fragment, useEffect, useRef } from 'react';
 import type { Detail, Message, Note } from '../api';
-import { Avatar, Bubble, DayLabel, EventPill, NoteCard, initials } from './ui';
+import { Check, Lock, Sparkle } from '../kit/icons';
+import { Avatar, Bubble, DayLabel, EventPill, Flex, NoteCard, Text, initials } from '../kit/ui';
 import { useWords } from './words';
 
 type Entry = { kind: 'message'; at: string; message: Message } | { kind: 'note'; at: string; note: Note };
@@ -23,6 +22,8 @@ const useEventLine = () => {
         return t('events.back', { by: meta.by ?? '' });
       case 'closed':
         return t('events.closed', { by: meta.by ?? '' });
+      case 'signed-in':
+        return t('events.signed_in', { name: meta.name ?? '' });
       default:
         return message.text;
     }
@@ -30,9 +31,9 @@ const useEventLine = () => {
 };
 
 const Caption = ({ children, align }: { children: React.ReactNode; align: 'start' | 'end' }) => (
-  <Typography variant="pi" textColor="neutral500" style={{ display: 'block', textAlign: align, paddingTop: 4 }}>
+  <Text variant="pi" color="neutral500" align={align} style={{ display: 'block', paddingTop: 4 }}>
     {children}
-  </Typography>
+  </Text>
 );
 
 /**
@@ -56,14 +57,14 @@ export const Transcript = ({ detail, wantedReason }: { detail: Detail; wantedRea
 
   if (entries.length === 0) {
     return (
-      <Flex justifyContent="center" padding={8}>
-        <Typography textColor="neutral500">{t('transcript.empty')}</Typography>
+      <Flex $justify="center" style={{ padding: 32 }}>
+        <Text color="neutral500">{t('transcript.empty')}</Text>
       </Flex>
     );
   }
 
   return (
-    <Flex direction="column" alignItems="stretch" gap={4} paddingTop={5} paddingBottom={5} paddingLeft={6} paddingRight={6}>
+    <Flex $direction="column" $gap={16} style={{ padding: '20px 24px' }}>
       {entries.map((entry, index) => {
         const previous = entries[index - 1];
         const newDay = !previous || new Date(previous.at).toDateString() !== new Date(entry.at).toDateString();
@@ -71,13 +72,13 @@ export const Transcript = ({ detail, wantedReason }: { detail: Detail; wantedRea
           <Fragment key={entry.kind === 'note' ? `note-${entry.note.id}` : entry.message.id}>
             {newDay ? <DayLabel>{day(entry.at)}</DayLabel> : null}
             {entry.kind === 'note' ? (
-              <Flex justifyContent="flex-end" style={{ paddingInlineEnd: 36 }} data-note>
+              <Flex $justify="flex-end" style={{ paddingInlineEnd: 36 }} data-note>
                 <NoteCard>
-                  <Flex gap={1} paddingBottom={1}>
-                    <Lock width="1.2rem" height="1.2rem" fill="warning600" aria-hidden />
-                    <Typography variant="pi" fontWeight="bold" textColor="warning700">
+                  <Flex $gap={6} style={{ paddingBottom: 4, color: 'inherit' }}>
+                    <Text variant="pi" weight="bold" color="warning700" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      <Lock size="12px" />
                       {t('note.label', { name: entry.note.author.name })} · {time(entry.note.createdAt)}
-                    </Typography>
+                    </Text>
                   </Flex>
                   {entry.note.text}
                 </NoteCard>
@@ -89,11 +90,11 @@ export const Transcript = ({ detail, wantedReason }: { detail: Detail; wantedRea
         );
       })}
       {detail.visitor.typing ? (
-        <Flex gap={2} aria-live="polite">
+        <Flex $gap={8} aria-live="polite">
           <Avatar $size={28}>{initials(visitorName)}</Avatar>
-          <Typography variant="pi" textColor="neutral500" style={{ fontStyle: 'italic' }}>
+          <Text variant="pi" color="neutral500" style={{ fontStyle: 'italic' }}>
             {t('visitor_typing')}
-          </Typography>
+          </Text>
         </Flex>
       ) : null}
       <div ref={end} />
@@ -132,20 +133,20 @@ const MessageLine = ({
 
   if (message.from === 'visitor') {
     return (
-      <Flex alignItems="flex-end" gap={2} data-from="visitor">
+      <Flex $align="flex-end" $gap={8} data-from="visitor">
         <Avatar $size={28}>{initials(visitorName)}</Avatar>
-        <Box minWidth={0} style={{ maxWidth: '75%' }}>
+        <div style={{ minWidth: 0, maxWidth: '75%' }}>
           <Bubble $from="visitor">{message.text}</Bubble>
           <Caption align="start">
             {time(message.createdAt)}
             {message.readBy ? (
               <>
                 {' · '}
-                <Check width="1rem" height="1rem" fill="success600" aria-hidden style={{ verticalAlign: 'middle' }} /> {t('read_by', { name: message.readBy })}
+                <Check size="11px" style={{ verticalAlign: '-1px' }} /> {t('read_by', { name: message.readBy })}
               </>
             ) : null}
           </Caption>
-        </Box>
+        </div>
       </Flex>
     );
   }
@@ -153,18 +154,18 @@ const MessageLine = ({
   const assistant = message.from === 'assistant';
   const who = assistant ? t('assistant') : (message.author?.name ?? '');
   return (
-    <Flex alignItems="flex-end" justifyContent="flex-end" gap={2} data-from={message.from}>
-      <Box minWidth={0} style={{ maxWidth: '75%' }}>
-        <Flex justifyContent="flex-end">
+    <Flex $align="flex-end" $justify="flex-end" $gap={8} data-from={message.from}>
+      <div style={{ minWidth: 0, maxWidth: '75%' }}>
+        <Flex $justify="flex-end">
           <Bubble $from={assistant ? 'assistant' : 'team'}>{message.text}</Bubble>
         </Flex>
         <Caption align="end">
-          <Typography variant="pi" fontWeight="bold" textColor="neutral600">
+          <Text variant="pi" weight="bold" color="neutral600">
             {who}
-          </Typography>{' '}
+          </Text>{' '}
           · {time(message.createdAt)}
         </Caption>
-      </Box>
+      </div>
       {assistant ? (
         <Avatar $size={28} $tone="warning" aria-hidden>
           <Sparkle />

@@ -14,7 +14,7 @@ export interface PublicMessage {
   id: string;
   from: 'visitor' | 'assistant' | 'team' | 'event';
   text: string;
-  /** For `from: 'event'`: what happened (`wanted`, `held`, `assigned`, `back`, `closed`). */
+  /** For `from: 'event'`: what happened (`wanted`, `held`, `assigned`, `back`, `closed`, `signed-in`). */
   event?: string;
   author?: { name: string };
   createdAt: string;
@@ -26,6 +26,8 @@ export interface PublicState {
   /** Who answers: the assistant, nobody yet (`wanted`), someone of the team (`held`), or nobody (`closed`). */
   state: 'assistant' | 'wanted' | 'held' | 'closed';
   holder: { name: string } | null;
+  /** Who the desk sees: a guest, or the account of the site the conversation is tied to. */
+  visitor: { name: string | null; signedIn: boolean };
 }
 
 type Listener = (change: Change) => void;

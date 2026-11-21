@@ -1,10 +1,10 @@
 import type { Core } from '@strapi/strapi';
+import { ACTIONS } from './permissions';
 
 const bootstrap = async ({ strapi }: { strapi: Core.Strapi }) => {
-  // "Use the desk", in Settings › Roles: the super admins have it, give it to your support roles.
-  await strapi.service('admin::permission').actionProvider.registerMany([
-    { section: 'plugins', displayName: 'Use the desk', uid: 'use', pluginName: 'aparte-desk' },
-  ]);
+  await strapi.service('admin::permission').actionProvider.registerMany(
+    Object.values(ACTIONS).map(({ uid, displayName }) => ({ section: 'plugins', displayName, uid, pluginName: 'aparte-desk' }))
+  );
 };
 
 export default bootstrap;

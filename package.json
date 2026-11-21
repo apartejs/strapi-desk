@@ -36,10 +36,12 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "strapi-server.js",
+    "strapi-admin.js"
   ],
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=16.0.0"
   },
   "scripts": {
     "build": "strapi-plugin build",
@@ -51,8 +53,7 @@
     "test": "vitest run"
   },
   "devDependencies": {
-    "@strapi/design-system": "^2.3.1",
-    "@strapi/icons": "^2.3.1",
+    "@strapi/plugin-users-permissions": "5.63.0",
     "@strapi/sdk-plugin": "^6.1.1",
     "@strapi/strapi": "^5.63.0",
     "@strapi/types": "5.63.0",
@@ -64,21 +65,16 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-intl": "^6.8.9",
-    "react-router-dom": "^6.30.6",
     "styled-components": "^6.6.0",
     "typescript": "^5.9.3",
     "vitest": "^3.2.4"
   },
   "peerDependencies": {
-    "@strapi/design-system": "^2.0.0",
-    "@strapi/icons": "^2.0.0",
-    "@strapi/sdk-plugin": "^6.1.1",
-    "@strapi/strapi": "^5.0.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-intl": "^6.8.9",
-    "react-router-dom": "^6.30.6",
-    "styled-components": "^6.6.0"
+    "@strapi/strapi": "^4.0.0 || ^5.0.0",
+    "react": "^17.0.0 || ^18.0.0",
+    "react-dom": "^17.0.0 || ^18.0.0",
+    "react-intl": "^5.20.0 || ^6.0.0",
+    "styled-components": "^5.2.1 || ^6.0.0"
   },
   "strapi": {
     "kind": "plugin",

@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { fakeModel, signIn, startStrapi, visitor } from './helpers';
+import { fakeModel, signIn, siteUser, startStrapi, visitor } from './helpers';
 
 type App = Awaited<ReturnType<typeof startStrapi>>;
 
@@ -12,8 +12,8 @@ describe('with an assistant', () => {
   beforeAll(async () => {
     model = await fakeModel();
     app = await startStrapi({ assistant: model.url });
-    marie = await signIn(app.strapi, app.base, { email: 'marie@example.com', firstname: 'Marie' });
-    jean = await signIn(app.strapi, app.base, { email: 'jean@example.com', firstname: 'Jean' });
+    marie = await signIn(app, { email: 'marie@example.com', firstname: 'Marie' });
+    jean = await signIn(app, { email: 'jean@example.com', firstname: 'Jean' });
   });
 
   afterAll(async () => {
@@ -31,9 +31,77 @@ describe('with an assistant', () => {
   it('refuses a conversation without its token, as if it did not exist', async () => {
     const chat = await visitor(app.base);
     const wrong = await fetch(chat.url(), { headers: { 'X-Desk-Token': 'nope' } });
+    const query = await fetch(`${chat.url()}?token=${chat.token}`);
     const none = await fetch(chat.url());
     expect(wrong.status).toBe(404);
+    expect(query.status).toBe(404);
     expect(none.status).toBe(404);
+  });
+
+  it('lets a page of another site send X-Desk-Token, once CORS allows it as the README says', async () => {
+    const chat = await visitor(app.base);
+    const preflight = await fetch(chat.url('/messages'), {
+      method: 'OPTIONS',
+      headers: {
+        Origin: 'https://shop.example.com',
+        'Access-Control-Request-Method': 'POST',
+        'Access-Control-Request-Headers': 'x-desk-token,authorization,content-type',
+      },
+    });
+    const allowed = (preflight.headers.get('access-control-allow-headers') ?? '').toLowerCase().split(/\s*,\s*/);
+    expect(allowed).toEqual(expect.arrayContaining(['x-desk-token', 'authorization', 'content-type']));
+  });
+
+  it("ties a signed-in user's conversation to their account, whatever the widget says", async () => {
+    const lea = await siteUser(app, { username: 'lea', email: 'lea@shop.example.com' });
+    const chat = await visitor(app.base, { visitor: { name: 'Someone else', email: 'else@example.com' } }, { jwt: lea.jwt });
+    expect(chat.status).toBe(201);
+    await chat.write('Where is my order?');
+    const shown = await (await marie.get(`/conversations/${chat.id}`)).json();
+    expect(shown.visitor).toMatchObject({ name: 'lea', email: 'lea@shop.example.com', userId: lea.id });
+    // Signed in from the start: nothing changed hands, nothing to say.
+    expect(shown.messages.some((m: { event: string | null }) => m.event === 'signed-in')).toBe(false);
+  });
+
+  it('lets a signed-in user reach their conversation by their account, and no one else', async () => {
+    const paul = await siteUser(app, { username: 'paul', email: 'paul@shop.example.com' });
+    const other = await siteUser(app, { username: 'other', email: 'other@shop.example.com' });
+    const chat = await visitor(app.base, {}, { jwt: paul.jwt });
+    expect((await fetch(chat.url(), { headers: { Authorization: `Bearer ${paul.jwt}` } })).status).toBe(200);
+    expect((await fetch(chat.url(), { headers: { Authorization: `Bearer ${other.jwt}` } })).status).toBe(404);
+  });
+
+  it('gives a guest\'s conversation to the user who signs in while it goes on', async () => {
+    const guest = await visitor(app.base);
+    await guest.write('I cannot find my order');
+    expect((await (await marie.get(`/conversations/${guest.id}`)).json()).visitor).toMatchObject({ name: null, userId: null });
+    const zoe = await siteUser(app, { username: 'zoe', email: 'zoe@shop.example.com' });
+    const signedIn = { ...guest.headers, Authorization: `Bearer ${zoe.jwt}` };
+    const written = await fetch(guest.url('/messages'), { method: 'POST', headers: signedIn, body: JSON.stringify({ text: 'Now I am signed in' }) });
+    expect(written.status).toBe(200);
+    expect((await (await marie.get(`/conversations/${guest.id}`)).json()).visitor).toMatchObject({ name: 'zoe', email: 'zoe@shop.example.com', userId: zoe.id });
+    // Theirs from now on: the account alone reaches it, and another account signing in takes it from no one.
+    const seen = await fetch(guest.url(), { headers: { Authorization: `Bearer ${zoe.jwt}` } });
+    expect(seen.status).toBe(200);
+    const shown = await seen.json();
+    expect(shown.visitor).toEqual({ name: 'zoe', signedIn: true });
+    // Said to the team, once, where it happened; never to the visitor.
+    expect(shown.messages.some((m: { event?: string }) => m.event === 'signed-in')).toBe(false);
+    const desk = (await (await marie.get(`/conversations/${guest.id}`)).json()).messages;
+    expect(desk.filter((m: { event: string | null }) => m.event === 'signed-in')).toEqual([expect.objectContaining({ from: 'event', meta: { name: 'zoe' } })]);
+    const events = desk.map((m: { event: string | null; text: string }) => m.event ?? m.text);
+    expect(events.indexOf('signed-in')).toBe(events.indexOf('Now I am signed in') - 1);
+    const other = await siteUser(app, { username: 'other2', email: 'other2@shop.example.com' });
+    await fetch(guest.url(), { headers: { ...guest.headers, Authorization: `Bearer ${other.jwt}` } });
+    expect((await (await marie.get(`/conversations/${guest.id}`)).json()).visitor).toMatchObject({ userId: zoe.id });
+  });
+
+  it('refuses a JWT that is not valid, and a blocked user, as Strapi does', async () => {
+    const blocked = await siteUser(app, { username: 'blocked', email: 'blocked@shop.example.com', blocked: true });
+    const open = (authorization: string) =>
+      fetch(`${app.base}/api/aparte-desk/conversations`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: authorization }, body: '{}' });
+    expect((await open('Bearer not-a-jwt')).status).toBe(401);
+    expect((await open(`Bearer ${blocked.jwt}`)).status).toBe(401);
   });
 
   it('lets the assistant answer, and keeps both messages', async () => {
@@ -170,7 +238,7 @@ describe('with an assistant', () => {
     const chat = await visitor(app.base);
     await chat.human();
     const controller = new AbortController();
-    const response = await fetch(`${chat.url('/events')}?token=${chat.token}`, { signal: controller.signal });
+    const response = await fetch(chat.url('/events'), { headers: chat.headers, signal: controller.signal });
     expect(response.headers.get('content-type')).toContain('text/event-stream');
     const reader = response.body!.getReader();
     const decoder = new TextDecoder();
@@ -188,7 +256,7 @@ describe('with an assistant', () => {
   });
 
   it('keeps the desk to whoever may use it', async () => {
-    const author = await signIn(app.strapi, app.base, { email: 'author@example.com', firstname: 'Ann', role: 'author' });
+    const author = await signIn(app, { email: 'author@example.com', firstname: 'Ann', role: 'author' });
     expect((await author.get('/conversations')).status).toBe(403);
     const anonymous = await fetch(`${app.base}/aparte-desk/conversations`);
     expect(anonymous.status).toBe(401);
@@ -201,7 +269,7 @@ describe('with the team only', () => {
 
   beforeAll(async () => {
     app = await startStrapi();
-    marie = await signIn(app.strapi, app.base, { email: 'marie@example.com', firstname: 'Marie' });
+    marie = await signIn(app, { email: 'marie@example.com', firstname: 'Marie' });
   });
 
   afterAll(async () => {
@@ -224,5 +292,54 @@ describe('with the team only', () => {
     await marie.post(`/conversations/${chat.id}/take`);
     expect((await marie.post(`/conversations/${chat.id}/hand-back`)).status).toBe(409);
     expect(await (await marie.get('/settings')).json()).toEqual({ assistant: false });
+  });
+});
+
+describe('the rights of each role', () => {
+  let app: App;
+  let reader: Awaited<ReturnType<typeof signIn>>;
+  let agent: Awaited<ReturnType<typeof signIn>>;
+  let lead: Awaited<ReturnType<typeof signIn>>;
+
+  beforeAll(async () => {
+    app = await startStrapi();
+    lead = await signIn(app, { email: 'lead@example.com', firstname: 'Lea' });
+    reader = await signIn(app, { email: 'reader@example.com', firstname: 'Rita', can: ['read'] });
+    agent = await signIn(app, { email: 'agent@example.com', firstname: 'Alex', can: ['read', 'answer'] });
+  });
+
+  afterAll(async () => {
+    await app?.stop();
+  });
+
+  it('tells the panel what each one may do', async () => {
+    expect(await (await reader.get('/me')).json()).toMatchObject({ can: { read: true, answer: false, assign: false, close: false, savedReplies: false } });
+    expect(await (await agent.get('/me')).json()).toMatchObject({ can: { read: true, answer: true, assign: false, close: false, savedReplies: false } });
+    expect(await (await lead.get('/me')).json()).toMatchObject({ can: { read: true, answer: true, assign: true, close: true, savedReplies: true } });
+  });
+
+  it('lets a reader read, and nothing more', async () => {
+    const chat = await visitor(app.base);
+    await chat.write('Where is my order?');
+    expect((await reader.get(`/conversations/${chat.id}`)).status).toBe(200);
+    expect((await reader.post(`/conversations/${chat.id}/take`)).status).toBe(403);
+    expect((await reader.post(`/conversations/${chat.id}/notes`, { text: 'hm' })).status).toBe(403);
+    expect((await reader.post(`/conversations/${chat.id}/close`)).status).toBe(403);
+    expect((await reader.post('/saved-replies', { title: 'hi', text: 'Hello!' })).status).toBe(403);
+    expect((await reader.get('/saved-replies')).status).toBe(200);
+  });
+
+  it('lets an agent take over and answer, but not assign nor close', async () => {
+    const chat = await visitor(app.base);
+    await chat.write('I need help');
+    expect((await agent.post(`/conversations/${chat.id}/take`)).status).toBe(200);
+    expect((await agent.post(`/conversations/${chat.id}/messages`, { text: 'Here I am.' })).status).toBe(200);
+    expect((await agent.get('/team')).status).toBe(403);
+    expect((await agent.post(`/conversations/${chat.id}/close`)).status).toBe(403);
+  });
+
+  it('assigns only to someone who may answer', async () => {
+    const team = (await (await lead.get('/team')).json()).results as { name: string }[];
+    expect(team.map((member) => member.name).sort()).toEqual(['Alex Test', 'Lea Test']);
   });
 });

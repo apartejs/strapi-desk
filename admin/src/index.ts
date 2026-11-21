@@ -3,19 +3,31 @@ import { PLUGIN_ID } from './pluginId';
 import { Initializer } from './components/Initializer';
 import { PluginIcon } from './components/PluginIcon';
 
-import type { StrapiApp } from '@strapi/strapi/admin';
+/**
+ * The admin's side of the plugin, the same for Strapi 4 and Strapi 5: both call `register` and
+ * `registerTrads`, and both take `addMenuLink` with these fields (Strapi 4 reads `Component` as a
+ * loader too). Typed loosely here, since each version types the app differently.
+ */
+interface AdminApp {
+  addMenuLink: (link: Record<string, unknown>) => void;
+  registerPlugin: (plugin: Record<string, unknown>) => void;
+  /** Strapi 5's app has its router here; Strapi 4's has none. */
+  router?: unknown;
+}
 
-/** Whoever may use the desk sees it in the menu: "Use the desk", in Settings › Roles. */
-export const USE = [{ action: 'plugin::aparte-desk.use', subject: null }];
+/** Whoever may see the conversations finds the desk in the menu: Settings › Roles › aparté Desk. */
+const READ = [{ action: 'plugin::aparte-desk.read', subject: null }];
 
-const plugin: StrapiApp['appPlugins'][string] = {
-  register(app) {
+const plugin = {
+  register(app: AdminApp) {
     app.addMenuLink({
-      to: `plugins/${PLUGIN_ID}`,
+      // Strapi 5 wants the path relative to the admin (it warns on a leading "/"), Strapi 4
+      // matches it as a route of its own, from the root.
+      to: 'router' in app ? `plugins/${PLUGIN_ID}` : `/plugins/${PLUGIN_ID}`,
       icon: PluginIcon,
-      intlLabel: { id: getTranslation('plugin.name'), defaultMessage: 'Conversations' },
+      intlLabel: { id: getTranslation('plugin.name'), defaultMessage: 'aparté Desk' },
       Component: () => import('./pages/App'),
-      permissions: USE,
+      permissions: READ,
     });
 
     app.registerPlugin({
@@ -26,7 +38,7 @@ const plugin: StrapiApp['appPlugins'][string] = {
     });
   },
 
-  async registerTrads({ locales }) {
+  async registerTrads({ locales }: { locales: string[] }) {
     return Promise.all(
       locales.map(async (locale) => {
         try {

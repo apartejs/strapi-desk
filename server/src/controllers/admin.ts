@@ -1,11 +1,12 @@
 import type { Core } from '@strapi/strapi';
-import { DeskError, type Conversation, type Member } from '../services/desk';
+import { DeskError, memberName, type Conversation, type Member } from '../services/desk';
 import type { Tab } from '../services/inbox';
+import { ACTIONS, action, type Can } from '../permissions';
 
 const SAVED_REPLY = 'plugin::aparte-desk.saved-reply';
 const TABS: Tab[] = ['wanted', 'mine', 'waiting', 'all'];
 
-/** The desk's own routes, for the admin panel: signed in, with "Use the desk". */
+/** The desk's own routes, for the admin panel; each route says which permission it needs. */
 const admin = ({ strapi }: { strapi: Core.Strapi }) => {
   const desk = () => strapi.plugin('aparte-desk').service('desk');
   const inbox = () => strapi.plugin('aparte-desk').service('inbox');
@@ -45,6 +46,14 @@ const admin = ({ strapi }: { strapi: Core.Strapi }) => {
   };
 
   return {
+    /** Who is signed in, and what their role lets them do here: the panel hides the rest. */
+    async me(ctx) {
+      const user = member(ctx);
+      const ability = ctx.state.userAbility as { can: (action: string) => boolean } | undefined;
+      const can = Object.fromEntries((Object.keys(ACTIONS) as Can[]).map((key) => [key, Boolean(ability?.can(action(key)))]));
+      ctx.body = { id: user.id, name: memberName(user), can, assistant: desk().hasAssistant() };
+    },
+
     async settings(ctx) {
       ctx.body = { assistant: desk().hasAssistant() };
     },
@@ -81,7 +90,7 @@ const admin = ({ strapi }: { strapi: Core.Strapi }) => {
       const to = Number(ctx.request.body?.userId);
       const team = await inbox().team();
       const colleague = team.find((user) => user.id === to);
-      if (!colleague) return ctx.badRequest('Give the conversation to someone who may use the desk.');
+      if (!colleague) return ctx.badRequest('Give the conversation to someone who may take conversations over and answer.');
       const user = await strapi.db.query('admin::user').findOne({ where: { id: to }, select: ['id', 'firstname', 'lastname', 'username', 'email'] });
       return act(ctx, (conversation) => desk().assign(conversation, member(ctx), user));
     },

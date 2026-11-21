@@ -1,7 +1,7 @@
 import type { Core } from '@strapi/strapi';
+import { action } from '../permissions';
 import { CONVERSATION, MESSAGE, NOTE, memberName, type Conversation, type Member, type Message } from './desk';
 
-export const USE = 'plugin::aparte-desk.use';
 const SUPER_ADMIN = 'strapi-super-admin';
 const MEMBER_FIELDS = ['id', 'firstname', 'lastname', 'username', 'email'];
 
@@ -141,10 +141,10 @@ const inbox = ({ strapi }: { strapi: Core.Strapi }) => {
       return { wanted, mine };
     },
 
-    /** Who may use the desk: the super admins, and the roles given "Use the desk". */
+    /** Who may hold a conversation: the super admins, and the roles allowed to take over and answer. */
     async team(): Promise<{ id: number; name: string; email: string | null }[]> {
       const permissions: { role?: { id: number } }[] = await strapi.db.query('admin::permission').findMany({
-        where: { action: USE },
+        where: { action: action('answer') },
         populate: { role: { select: ['id'] } },
       });
       const roleIds = permissions.map((permission) => permission.role?.id).filter((id): id is number => typeof id === 'number');

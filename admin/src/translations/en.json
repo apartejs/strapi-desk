@@ -27,6 +27,7 @@
   "events.held": "{name} took it over",
   "events.assigned": "{by} assigned it to {name}",
   "events.back": "{by} handed it back to the assistant",
+  "events.signed_in": "The visitor signed in as {name}",
   "events.closed": "Closed by {by}",
   "read_by": "Read by {name}",
   "note.label": "Note by {name}",
@@ -74,5 +75,9 @@
   "panel.messages": "Messages",
   "chip.held_anyone": "Held",
   "now": "now",
-  "back": "Back to the list"
+  "back": "Back to the list",
+  "saved.edit": "Edit",
+  "reply.read_only": "Your role lets you read this conversation, not answer it.",
+  "forbidden": "Your role does not allow this.",
+  "assign.pick": "Choose a colleague"
 }

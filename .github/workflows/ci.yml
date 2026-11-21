@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Types and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec tsc -p admin/tsconfig.json --noEmit
+      - run: pnpm exec tsc -p server/tsconfig.json --noEmit
+      - run: pnpm build
+
+  strapi:
+    # The first and the last release of each major Strapi supports, each on the Node it runs on.
+    name: Strapi ${{ matrix.strapi }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - strapi: 4.0.0
+            node: 16
+          - strapi: 4.26.2
+            node: 20
+          - strapi: 5.0.0
+            node: 20
+          - strapi: latest
+            node: 22
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      # The Node that runs Strapi, first; then the one that runs the build and the tests.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: echo "DESK_NODE=$(which node)" >> "$GITHUB_ENV"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Make a Strapi ${{ matrix.strapi }} app with the plugin
+        run: node scripts/strapi-app.mjs ${{ matrix.strapi }}
+      - name: Test
+        run: DESK_APP=.apps/strapi-${{ matrix.strapi }} pnpm test

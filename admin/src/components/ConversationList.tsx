@@ -1,7 +1,6 @@
-import { Box, Flex, Loader, Searchbar, Typography } from '@strapi/design-system';
-import { Archive, Bell, Sparkle, User } from '@strapi/icons';
 import type { Row, Tab } from '../api';
-import { Avatar, Count, Meta, Reason, RowButton, Scroll, Segment, Segmented, initials } from './ui';
+import { Archive, Bell, Sparkle, User } from '../kit/icons';
+import { Avatar, Count, Divider, Flex, Meta, Reason, RowButton, Scroll, SearchField, Segment, Segmented, Spinner, Text, initials } from '../kit/ui';
 import { useWords } from './words';
 
 interface Props {
@@ -31,7 +30,7 @@ const RowMeta = ({ row, me }: { row: Row; me: number | null }) => {
   }
   if (row.state === 'held') {
     return (
-      <Flex justifyContent="space-between" gap={2} width="100%">
+      <Flex $justify="space-between" $gap={8} style={{ width: '100%' }}>
         <Meta $tone={row.holder?.id === me ? 'success' : 'neutral'}>
           <User aria-hidden />
           <span>{row.holder?.id === me ? t('chip.yours') : (row.holder?.name ?? '')}</span>
@@ -64,7 +63,7 @@ export const ConversationList = ({ tab, onTab, q, onSearch, rows, counts, open, 
 
   return (
     <>
-      <Flex direction="column" alignItems="stretch" gap={3} padding={4}>
+      <Flex $direction="column" $gap={12} style={{ padding: 16 }}>
         <Segmented role="tablist" aria-label={t('plugin.name')}>
           {TABS.map((which) => (
             <Segment key={which} type="button" role="tab" aria-selected={tab === which} $active={tab === which} onClick={() => onTab(which)}>
@@ -73,30 +72,18 @@ export const ConversationList = ({ tab, onTab, q, onSearch, rows, counts, open, 
             </Segment>
           ))}
         </Segmented>
-        <Searchbar
-          name="q"
-          size="S"
-          value={q}
-          onChange={(event: React.ChangeEvent<HTMLInputElement>) => onSearch(event.target.value)}
-          onClear={() => onSearch('')}
-          clearLabel={t('actions.cancel')}
-          placeholder={t('search')}
-        >
-          {t('search')}
-        </Searchbar>
+        <SearchField value={q} onChange={onSearch} placeholder={t('search')} clearLabel={t('actions.cancel')} />
       </Flex>
-      <Box borderColor="neutral150" style={{ borderTopWidth: 1, borderTopStyle: 'solid' }} />
+      <Divider />
       <Scroll>
         {rows === null ? (
-          <Flex justifyContent="center" padding={6}>
-            <Loader small />
+          <Flex $justify="center" style={{ padding: 24 }}>
+            <Spinner />
           </Flex>
         ) : rows.length === 0 ? (
-          <Box padding={6}>
-            <Typography variant="omega" textColor="neutral500" tag="p" textAlign="center">
-              {empty}
-            </Typography>
-          </Box>
+          <Text tag="p" color="neutral500" align="center" style={{ display: 'block', padding: 24 }}>
+            {empty}
+          </Text>
         ) : (
           <ul>
             {rows.map((row) => {
@@ -106,26 +93,26 @@ export const ConversationList = ({ tab, onTab, q, onSearch, rows, counts, open, 
                 <li key={row.id}>
                   <RowButton type="button" $active={row.id === open} aria-current={row.id === open ? 'true' : undefined} onClick={() => onOpen(row.id)} data-conversation={row.id}>
                     <Avatar $size={36}>{initials(name)}</Avatar>
-                    <Flex direction="column" alignItems="stretch" gap={1} flex="1" minWidth={0}>
-                      <Flex justifyContent="space-between" gap={2}>
-                        <Typography fontWeight="bold" textColor="neutral800" ellipsis>
+                    <Flex $direction="column" $gap={4} $grow>
+                      <Flex $justify="space-between" $gap={8}>
+                        <Text weight="bold" ellipsis>
                           {name}
-                        </Typography>
-                        <Typography
+                        </Text>
+                        <Text
                           variant="pi"
-                          fontWeight={row.waiting || row.state === 'wanted' ? 'bold' : undefined}
-                          textColor={row.waiting || row.state === 'wanted' ? 'danger600' : 'neutral500'}
+                          weight={row.waiting || row.state === 'wanted' ? 'bold' : undefined}
+                          color={row.waiting || row.state === 'wanted' ? 'danger600' : 'neutral500'}
                           style={{ whiteSpace: 'nowrap' }}
                         >
                           {ago(at)}
-                        </Typography>
+                        </Text>
                       </Flex>
-                      <Typography variant="omega" textColor="neutral700" ellipsis>
+                      <Text color="neutral700" ellipsis>
                         {row.lastMessage || row.title || ''}
-                      </Typography>
-                      <Box paddingTop={1}>
+                      </Text>
+                      <div style={{ paddingTop: 4 }}>
                         <RowMeta row={row} me={me} />
-                      </Box>
+                      </div>
                     </Flex>
                   </RowButton>
                 </li>

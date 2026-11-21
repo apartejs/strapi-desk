@@ -1,6 +1,6 @@
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import type { Core } from '@strapi/strapi';
-import type { DeskConfig } from '../config';
+import { deskConfig, type DeskConfig } from '../config';
 import type { Change, PublicMessage, PublicState } from './hub';
 
 export const CONVERSATION = 'plugin::aparte-desk.conversation';
@@ -81,7 +81,7 @@ const fill = (words: string, values: Record<string, string>) =>
   words.replace(/\{(\w+)\}/g, (all, key) => values[key] ?? all);
 
 const desk = ({ strapi }: { strapi: Core.Strapi }) => {
-  const config = (): DeskConfig => strapi.config.get('plugin::aparte-desk') as DeskConfig;
+  const config = (): DeskConfig => deskConfig(strapi);
   const conversations = () => strapi.db.query(CONVERSATION);
   const messages = () => strapi.db.query(MESSAGE);
   const hub = () => strapi.plugin('aparte-desk').service('hub');
@@ -104,6 +104,7 @@ const desk = ({ strapi }: { strapi: Core.Strapi }) => {
   const publicState = (conversation: Conversation): PublicState => ({
     state: conversation.state,
     holder: conversation.state === 'held' && conversation.holder ? { name: memberName(conversation.holder) } : null,
+    visitor: { name: conversation.visitorName ?? null, signedIn: conversation.visitorUserId != null },
   });
 
   /** What the visitor's chat shows of a message. An event shows its notice; one with no notice shows nothing. */
@@ -185,6 +186,25 @@ const desk = ({ strapi }: { strapi: Core.Strapi }) => {
       const kept = Buffer.from(conversation.tokenHash, 'hex');
       if (given.length !== kept.length || !timingSafeEqual(given, kept)) return null;
       return load(uid);
+    },
+
+    /**
+     * A guest's conversation, taken by the user who signs in on the site while it goes on: it is
+     * theirs from now on, under the name and email of their account.
+     */
+    async claim(conversation: Conversation, account: { id: number; name: string | null; email: string | null }): Promise<Conversation> {
+      if (conversation.visitorUserId != null) return conversation;
+      const current = await update(conversation, { visitorUserId: account.id, visitorName: account.name?.slice(0, 200) || null, visitorEmail: account.email || null });
+      // A line for the team, where it happened: an event without text, which the visitor's chat never reads.
+      await record(current, { from: 'event', event: 'signed-in', meta: { name: current.visitorName ?? current.visitorEmail ?? '' } });
+      return current;
+    },
+
+    /** The conversation of this signed-in user, or null: a site's user reaches theirs by their account. */
+    async ownedBy(uid: string, userId: number): Promise<Conversation | null> {
+      if (typeof uid !== 'string') return null;
+      const conversation: Conversation | null = await conversations().findOne({ where: { uid, visitorUserId: userId }, select: ['id'] });
+      return conversation ? load(uid) : null;
     },
 
     /** The messages the visitor's chat shows, oldest first. */

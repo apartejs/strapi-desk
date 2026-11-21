@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useFetchClient } from '@strapi/strapi/admin';
+import { http } from './kit/http';
 
 export type State = 'assistant' | 'wanted' | 'held' | 'closed';
 export type Tab = 'wanted' | 'mine' | 'waiting' | 'all';
@@ -57,6 +57,14 @@ export interface SavedReply {
 
 export const BASE = '/aparte-desk';
 
+/** What the signed-in member may do here, as their role allows. */
+export interface Me {
+  id: number;
+  name: string;
+  assistant: boolean;
+  can: { read: boolean; answer: boolean; assign: boolean; close: boolean; savedReplies: boolean };
+}
+
 /** How often the list and the open conversation look for news. */
 export const POLL_MS = 5000;
 
@@ -65,7 +73,6 @@ export const POLL_MS = 5000;
  * `key` changes what is asked; `null` asks nothing.
  */
 export function usePolled<T>(path: string | null) {
-  const { get } = useFetchClient();
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<unknown>(null);
   const current = useRef(path);
@@ -75,7 +82,7 @@ export function usePolled<T>(path: string | null) {
     const asked = current.current;
     if (!asked) return;
     try {
-      const { data: answer } = await get<T>(`${BASE}${asked}`);
+      const { data: answer } = await http.get<T>(`${BASE}${asked}`);
       // An answer to a question no longer asked (another conversation opened meanwhile) is dropped.
       if (current.current === asked) {
         setData(answer);
@@ -84,7 +91,7 @@ export function usePolled<T>(path: string | null) {
     } catch (failure) {
       if (current.current === asked) setError(failure);
     }
-  }, [get]);
+  }, []);
 
   useEffect(() => {
     setData(null);

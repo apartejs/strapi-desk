@@ -1,114 +1,140 @@
-import { Box, Button, Field, Flex, IconButton, Modal, TextInput, Textarea, Typography } from '@strapi/design-system';
-import { Pencil, Plus, Trash } from '@strapi/icons';
-import { useFetchClient, useNotification } from '@strapi/strapi/admin';
 import { useState } from 'react';
+import styled from 'styled-components';
 import { BASE, type SavedReply } from '../api';
+import { http } from '../kit/http';
+import { Pencil, Plus, Trash } from '../kit/icons';
+import { Button, Dialog, Flex, IconButton, Input, Label, Text, TextArea } from '../kit/ui';
 import { useWords } from './words';
 
+type Draft = SavedReply | { id: null; title: string; text: string };
+
+interface Props {
+  open: boolean;
+  onClose: () => void;
+  replies: SavedReply[];
+  onChanged: () => void;
+  onError: (message: string) => void;
+}
+
 /** The answers the team gives often, written once and inserted with "/" in a reply. */
-export const SavedReplies = ({ open, onOpenChange, replies, onChanged }: { open: boolean; onOpenChange: (open: boolean) => void; replies: SavedReply[]; onChanged: () => void }) => {
+export const SavedReplies = ({ open, onClose, replies, onChanged, onError }: Props) => {
   const { t } = useWords();
-  const { post, put, del } = useFetchClient();
-  const { toggleNotification } = useNotification();
-  const [editing, setEditing] = useState<SavedReply | { id: null; title: string; text: string } | null>(null);
+  const [editing, setEditing] = useState<Draft | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const close = () => {
+    setEditing(null);
+    onClose();
+  };
 
   const save = async () => {
     if (!editing) return;
     const body = { title: editing.title.trim().replace(/^\//, ''), text: editing.text };
+    setBusy(true);
     try {
-      if (editing.id === null) await post(`${BASE}/saved-replies`, body);
-      else await put(`${BASE}/saved-replies/${editing.id}`, body);
+      if (editing.id === null) await http.post(`${BASE}/saved-replies`, body);
+      else await http.put(`${BASE}/saved-replies/${editing.id}`, body);
       setEditing(null);
       onChanged();
     } catch {
-      toggleNotification({ type: 'danger', message: t('error') });
+      onError(t('error'));
+    } finally {
+      setBusy(false);
     }
   };
 
   const remove = async (reply: SavedReply) => {
     try {
-      await del(`${BASE}/saved-replies/${reply.id}`);
+      await http.del(`${BASE}/saved-replies/${reply.id}`);
       onChanged();
     } catch {
-      toggleNotification({ type: 'danger', message: t('error') });
+      onError(t('error'));
     }
   };
 
   return (
-    <Modal.Root open={open} onOpenChange={onOpenChange}>
-      <Modal.Content>
-        <Modal.Header>
-          <Modal.Title>{t('saved.many')}</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          {editing ? (
-            <Flex direction="column" alignItems="stretch" gap={4}>
-              <Field.Root name="title" hint={t('saved.shortcut_help')} required>
-                <Field.Label>{t('saved.shortcut')}</Field.Label>
-                <TextInput value={editing.title} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setEditing({ ...editing, title: event.target.value })} />
-                <Field.Hint />
-              </Field.Root>
-              <Field.Root name="text" required>
-                <Field.Label>{t('saved.text')}</Field.Label>
-                <Textarea value={editing.text} onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => setEditing({ ...editing, text: event.target.value })} />
-              </Field.Root>
-            </Flex>
-          ) : replies.length === 0 ? (
-            <Box padding={4}>
-              <Typography fontWeight="bold" tag="p">
-                {t('saved.empty')}
-              </Typography>
-              <Typography textColor="neutral600" tag="p">
-                {t('saved.empty_help')}
-              </Typography>
-            </Box>
-          ) : (
-            <Flex tag="ul" direction="column" alignItems="stretch" gap={2}>
-              {replies.map((reply) => (
-                <Flex tag="li" key={reply.id} justifyContent="space-between" gap={2} padding={2} hasRadius background="neutral100">
-                  <Box minWidth={0}>
-                    <Typography fontWeight="bold" tag="p">
-                      /{reply.title}
-                    </Typography>
-                    <Typography variant="pi" textColor="neutral600" ellipsis tag="p">
-                      {reply.text}
-                    </Typography>
-                  </Box>
-                  <Flex gap={1}>
-                    <IconButton label={t('saved.save')} onClick={() => setEditing(reply)} variant="ghost">
-                      <Pencil />
-                    </IconButton>
-                    <IconButton label={t('saved.delete')} onClick={() => void remove(reply)} variant="ghost">
-                      <Trash />
-                    </IconButton>
-                  </Flex>
-                </Flex>
-              ))}
-            </Flex>
-          )}
-        </Modal.Body>
-        <Modal.Footer>
-          {editing ? (
-            <>
-              <Button variant="tertiary" onClick={() => setEditing(null)}>
-                {t('actions.cancel')}
-              </Button>
-              <Button onClick={() => void save()} disabled={!editing.title.trim() || !editing.text.trim()}>
-                {t('saved.save')}
-              </Button>
-            </>
-          ) : (
-            <>
-              <Modal.Close>
-                <Button variant="tertiary">{t('actions.cancel')}</Button>
-              </Modal.Close>
-              <Button startIcon={<Plus />} onClick={() => setEditing({ id: null, title: '', text: '' })}>
-                {t('saved.add')}
-              </Button>
-            </>
-          )}
-        </Modal.Footer>
-      </Modal.Content>
-    </Modal.Root>
+    <Dialog
+      open={open}
+      onClose={close}
+      title={t('saved.many')}
+      closeLabel={t('actions.cancel')}
+      footer={
+        editing ? (
+          <>
+            <Button variant="tertiary" onClick={() => setEditing(null)}>
+              {t('actions.cancel')}
+            </Button>
+            <Button onClick={() => void save()} loading={busy} disabled={!editing.title.trim() || !editing.text.trim()}>
+              {t('saved.save')}
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button variant="tertiary" onClick={close}>
+              {t('actions.cancel')}
+            </Button>
+            <Button startIcon={<Plus />} onClick={() => setEditing({ id: null, title: '', text: '' })}>
+              {t('saved.add')}
+            </Button>
+          </>
+        )
+      }
+    >
+      {editing ? (
+        <Flex $direction="column" $gap={16}>
+          <div>
+            <Label htmlFor="aparte-desk-shortcut" hint={t('saved.shortcut_help')}>
+              {t('saved.shortcut')}
+            </Label>
+            <Input id="aparte-desk-shortcut" required value={editing.title} onChange={(event) => setEditing({ ...editing, title: event.target.value })} />
+          </div>
+          <div>
+            <Label htmlFor="aparte-desk-saved-text">{t('saved.text')}</Label>
+            <TextArea id="aparte-desk-saved-text" required value={editing.text} onChange={(event) => setEditing({ ...editing, text: event.target.value })} />
+          </div>
+        </Flex>
+      ) : replies.length === 0 ? (
+        <Flex $direction="column" $gap={4} style={{ padding: 8 }}>
+          <Text weight="bold" tag="p">
+            {t('saved.empty')}
+          </Text>
+          <Text color="neutral600" tag="p">
+            {t('saved.empty_help')}
+          </Text>
+        </Flex>
+      ) : (
+        <Flex as="ul" $direction="column" $gap={8} style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+          {replies.map((reply) => (
+            <Item key={reply.id}>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <Text weight="bold" tag="p">
+                  /{reply.title}
+                </Text>
+                <Text variant="pi" color="neutral600" ellipsis tag="p">
+                  {reply.text}
+                </Text>
+              </div>
+              <Flex $gap={4}>
+                <IconButton label={t('saved.edit')} onClick={() => setEditing(reply)}>
+                  <Pencil />
+                </IconButton>
+                <IconButton label={t('saved.delete')} onClick={() => void remove(reply)}>
+                  <Trash />
+                </IconButton>
+              </Flex>
+            </Item>
+          ))}
+        </Flex>
+      )}
+    </Dialog>
   );
 };
+
+const Item = styled.li`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 8px 8px 12px;
+  border-radius: 4px;
+  background: ${({ theme }) => theme.colors.neutral100};
+`;

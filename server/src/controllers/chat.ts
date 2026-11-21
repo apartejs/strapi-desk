@@ -1,40 +1,63 @@
 import { PassThrough } from 'node:stream';
 import type { Core } from '@strapi/strapi';
-import type { DeskConfig } from '../config';
+import { deskConfig, type DeskConfig } from '../config';
 import { DeskError, type Conversation } from '../services/desk';
 import type { Change } from '../services/hub';
 
 /**
  * The chat API, for any widget on the site: open a conversation, write in it, ask for a person,
- * and hear what the team does. A conversation is reached with the token its opening gave, in
- * the `X-Desk-Token` header (or `?token=` for the events stream, which `EventSource` cannot give
- * a header to).
+ * and hear what the team does.
+ *
+ * A visitor is anonymous, or a user of the site signed in through Strapi's users-permissions:
+ * the widget then sends that user's JWT in `Authorization: Bearer …`, the conversation is theirs,
+ * with the name and email of their account, and they reach it by that account. An anonymous
+ * visitor reaches a conversation with the token its opening gave, in the `X-Desk-Token` header;
+ * a guest who signs in while it goes on sends both, and the conversation becomes theirs.
  */
+type Account = { id: number; name: string | null; email: string | null };
+
 const chat = ({ strapi }: { strapi: Core.Strapi }) => {
-  const config = () => strapi.config.get('plugin::aparte-desk') as DeskConfig;
+  const config = () => deskConfig(strapi);
   const desk = () => strapi.plugin('aparte-desk').service('desk');
   const hub = () => strapi.plugin('aparte-desk').service('hub');
   const assistant = () => strapi.plugin('aparte-desk').service('assistant');
 
-  /** A page of another site, when the app named the ones allowed. */
-  const refusedOrigin = (ctx): boolean => {
-    const allowed = config().allowedOrigins;
-    const origin = ctx.get('origin');
-    if (!allowed || !origin || allowed.includes(origin)) return false;
-    ctx.status = 403;
-    ctx.body = { error: { status: 403, message: 'This origin may not use the chat.' } };
-    return true;
+  const refuse = (ctx, status: number, message: string) => {
+    ctx.status = status;
+    ctx.body = { error: { status, message } };
   };
 
-  const conversationOf = async (ctx, { queryToken = false } = {}): Promise<Conversation | null> => {
-    if (refusedOrigin(ctx)) return null;
-    const token = ctx.get('x-desk-token') || (queryToken ? String(ctx.query.token ?? '') : '');
-    const conversation = await desk().authenticate(ctx.params.id, token);
-    if (!conversation) {
-      ctx.status = 404;
-      ctx.body = { error: { status: 404, message: 'No conversation for this id and token.' } };
-      return null;
+  /**
+   * The site's user this request is signed in as: null without `Authorization`, or without
+   * users-permissions to check it with; undefined (and a 401 answered) for a JWT that is not
+   * valid, or a blocked user, as Strapi's own API answers.
+   */
+  const accountOf = async (ctx): Promise<Account | null | undefined> => {
+    if (!ctx.get('authorization')) return null;
+    const users = strapi.plugin('users-permissions');
+    if (!users) return null;
+    let payload: { id?: unknown } | null = null;
+    try {
+      payload = await users.service('jwt').getToken(ctx);
+    } catch {
+      payload = null;
     }
+    const user = payload?.id != null ? await strapi.db.query('plugin::users-permissions.user').findOne({ where: { id: payload.id } }) : null;
+    if (!user || user.blocked) {
+      refuse(ctx, 401, 'This Authorization is not a valid user of the site.');
+      return undefined;
+    }
+    return { id: user.id, name: user.username ?? null, email: user.email ?? null };
+  };
+
+  const conversationOf = async (ctx): Promise<Conversation | null> => {
+    const account = await accountOf(ctx);
+    if (account === undefined) return null;
+    const token = ctx.get('x-desk-token');
+    const opened = token ? await desk().authenticate(ctx.params.id, token) : null;
+    if (opened) return account ? desk().claim(opened, account) : opened;
+    const conversation = account ? await desk().ownedBy(ctx.params.id, account.id) : null;
+    if (!conversation) refuse(ctx, 404, 'No conversation for this id and token.');
     return conversation;
   };
 
@@ -62,12 +85,15 @@ const chat = ({ strapi }: { strapi: Core.Strapi }) => {
 
   return {
     async open(ctx) {
-      if (refusedOrigin(ctx)) return;
+      const account = await accountOf(ctx);
+      if (account === undefined) return;
       const body = (ctx.request.body ?? {}) as { visitor?: { name?: unknown; email?: unknown }; context?: unknown };
       const name = typeof body.visitor?.name === 'string' ? body.visitor.name.trim() : undefined;
       const email = typeof body.visitor?.email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.visitor.email.trim()) ? body.visitor.email.trim() : undefined;
       const context = body.context && typeof body.context === 'object' && !Array.isArray(body.context) && JSON.stringify(body.context).length <= 4000 ? (body.context as Record<string, unknown>) : undefined;
-      const { conversation, token } = await desk().open({ visitor: { name, email }, context });
+      // A signed-in user is who their account says, never what the widget says.
+      const visitor = account ? { name: account.name ?? undefined, email: account.email ?? undefined, userId: account.id } : { name, email };
+      const { conversation, token } = await desk().open({ visitor, context });
       ctx.status = 201;
       ctx.body = { id: conversation.uid, token, ...desk().publicState(conversation), assistant: desk().hasAssistant() };
     },
@@ -127,7 +153,7 @@ const chat = ({ strapi }: { strapi: Core.Strapi }) => {
 
     /** What the team does, as it happens: server-sent events, one per change. */
     async events(ctx) {
-      const conversation = await conversationOf(ctx, { queryToken: true });
+      const conversation = await conversationOf(ctx);
       if (!conversation) return;
       const stream = new PassThrough();
       const send = (change: Change | { type: 'ready'; state: unknown }) => stream.write(`event: ${change.type}\ndata: ${JSON.stringify(change)}\n\n`);

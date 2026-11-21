@@ -27,6 +27,7 @@
   "events.held": "{name} a pris la conversation",
   "events.assigned": "{by} l'a confiée à {name}",
   "events.back": "{by} l'a rendue à l'assistant",
+  "events.signed_in": "Le visiteur s'est connecté en tant que {name}",
   "events.closed": "Fermée par {by}",
   "read_by": "Lu par {name}",
   "note.label": "Note de {name}",
@@ -74,5 +75,9 @@
   "panel.messages": "Messages",
   "chip.held_anyone": "Tenue",
   "now": "à l'instant",
-  "back": "Retour à la liste"
+  "back": "Retour à la liste",
+  "saved.edit": "Modifier",
+  "reply.read_only": "Votre rôle vous permet de lire cette conversation, pas d’y répondre.",
+  "forbidden": "Votre rôle ne le permet pas.",
+  "assign.pick": "Choisir un collègue"
 }
