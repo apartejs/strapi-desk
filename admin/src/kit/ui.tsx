@@ -1,4 +1,8 @@
-import styled, { css } from 'styled-components';
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import styled, { type DefaultTheme } from 'styled-components';
+import { css, keyframes } from './css';
+import { Cross as CrossIcon, Search as SearchIcon } from './icons';
 
 /**
  * The desk's own pieces, drawn with the admin's theme (its colours, shadows and radius), so they
@@ -118,7 +122,7 @@ export const Segment = styled.button<{ $active: boolean }>`
   padding: 7px 8px;
   border: 0;
   border-radius: 4px;
-  font-size: 1.3rem;
+  font-size: 13px;
   font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
@@ -143,7 +147,7 @@ export const Count = styled.span<{ $strong?: boolean }>`
   height: 18px;
   padding: 0 5px;
   border-radius: 9px;
-  font-size: 1.1rem;
+  font-size: 11px;
   font-weight: 600;
   background: ${({ theme, $strong }) => ($strong ? theme.colors.primary600 : theme.colors.neutral200)};
   color: ${({ theme, $strong }) => ($strong ? theme.colors.neutral0 : theme.colors.neutral700)};
@@ -178,7 +182,7 @@ export const Meta = styled.span<{ $tone?: 'neutral' | 'warning' | 'danger' | 'su
   gap: 5px;
   min-width: 0;
   max-width: 100%;
-  font-size: 1.2rem;
+  font-size: 12px;
   font-weight: ${({ $tone }) => ($tone && $tone !== 'neutral' ? 600 : 400)};
   color: ${({ theme, $tone = 'neutral' }) => theme.colors[$tone === 'neutral' ? 'neutral600' : (`${$tone}600` as const)]};
 
@@ -204,10 +208,10 @@ export const Reason = styled(Meta)`
 
 /** A message's bubble. */
 export const Bubble = styled.div<{ $from: 'visitor' | 'assistant' | 'team' }>`
-  max-width: min(32rem, 100%);
+  max-width: min(320px, 100%);
   padding: 10px 14px;
   border-radius: 14px;
-  font-size: 1.4rem;
+  font-size: 14px;
   line-height: 1.5;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -226,8 +230,8 @@ export const Bubble = styled.div<{ $from: 'visitor' | 'assistant' | 'team' }>`
             border-end-end-radius: 4px;
           `
         : css`
-            background: ${theme.colors.buttonPrimary600};
-            color: ${theme.colors.buttonNeutral0};
+            background: ${buttonPrimary(theme)};
+            color: ${buttonText(theme)};
             border-end-end-radius: 4px;
           `}
 `;
@@ -240,7 +244,7 @@ export const EventPill = styled.div`
   border-radius: 999px;
   background: ${({ theme }) => theme.colors.neutral100};
   color: ${({ theme }) => theme.colors.neutral600};
-  font-size: 1.2rem;
+  font-size: 12px;
   line-height: 1.5;
   text-align: center;
 
@@ -252,13 +256,13 @@ export const EventPill = styled.div`
 
 /** A note of the team, which the visitor and the assistant never read. */
 export const NoteCard = styled.div`
-  max-width: min(32rem, 100%);
+  max-width: min(320px, 100%);
   padding: 10px 14px;
   border: 1px solid ${({ theme }) => theme.colors.warning200};
   border-radius: 10px;
   background: ${({ theme }) => theme.colors.warning100};
   color: ${({ theme }) => theme.colors.neutral800};
-  font-size: 1.4rem;
+  font-size: 14px;
   line-height: 1.5;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -267,7 +271,7 @@ export const NoteCard = styled.div`
 export const DayLabel = styled.div`
   align-self: center;
   padding: 4px 0;
-  font-size: 1.1rem;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -280,7 +284,7 @@ export const ModeTab = styled.button<{ $active: boolean; $tone: 'primary' | 'war
   border: 0;
   border-bottom: 2px solid ${({ theme, $active, $tone }) => ($active ? theme.colors[`${$tone}600`] : 'transparent')};
   background: none;
-  font-size: 1.4rem;
+  font-size: 14px;
   font-weight: 600;
   color: ${({ theme, $active }) => ($active ? theme.colors.neutral800 : theme.colors.neutral500)};
   cursor: pointer;
@@ -325,3 +329,528 @@ export const NarrowOnly = styled.div`
     display: block;
   }
 `;
+
+/* ------------------------------------------------------------------------------------------------
+ * The admin's primitives, redrawn: the design system is v1 in Strapi 4 and v2 in Strapi 5, with
+ * other components and other props, and this admin is one build for both. The look is the
+ * design system's own: the same sizes, the same theme tokens. Every size is in pixels: a rem is
+ * 10px in Strapi 5 and in the later Strapi 4 (their root is 62.5%), but 16px in Strapi 4.0.
+ * --------------------------------------------------------------------------------------------- */
+
+type Color = keyof DefaultTheme['colors'];
+
+/*
+ * The button's own colours (the same in the light and the dark theme) came with the dark theme;
+ * Strapi 4.0, light only, draws its buttons with the primary scale and white.
+ */
+const buttonPrimary = (theme: DefaultTheme) => theme.colors.buttonPrimary600 ?? theme.colors.primary600;
+const buttonPrimaryHover = (theme: DefaultTheme) => theme.colors.buttonPrimary500 ?? theme.colors.primary500;
+const buttonText = (theme: DefaultTheme) => theme.colors.buttonNeutral0 ?? theme.colors.neutral0;
+
+const VARIANTS = {
+  alpha: { size: '32px', line: '40px', weight: 700 },
+  beta: { size: '18px', line: '22px', weight: 700 },
+  delta: { size: '16px', line: '24px', weight: 600 },
+  epsilon: { size: '16px', line: '24px', weight: 400 },
+  omega: { size: '14px', line: '20px', weight: 400 },
+  pi: { size: '12px', line: '16px', weight: 400 },
+  sigma: { size: '11px', line: '16px', weight: 700 },
+} as const;
+
+const TextBase = styled.span<{ $variant: keyof typeof VARIANTS; $weight?: number; $color: Color; $ellipsis?: boolean; $align?: string }>`
+  margin: 0;
+  font-size: ${({ $variant }) => VARIANTS[$variant].size};
+  line-height: ${({ $variant }) => VARIANTS[$variant].line};
+  font-weight: ${({ $variant, $weight }) => $weight ?? VARIANTS[$variant].weight};
+  color: ${({ theme, $color }) => theme.colors[$color]};
+  text-align: ${({ $align }) => $align ?? 'inherit'};
+  ${({ $variant }) =>
+    $variant === 'sigma'
+      ? css`
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+        `
+      : ''}
+  ${({ $ellipsis }) =>
+    $ellipsis
+      ? css`
+          display: block;
+          overflow: hidden;
+          white-space: nowrap;
+          text-overflow: ellipsis;
+        `
+      : ''}
+`;
+
+export const Text = ({
+  variant = 'omega',
+  weight,
+  color = 'neutral800',
+  tag = 'span',
+  ellipsis,
+  align,
+  children,
+  ...rest
+}: {
+  variant?: keyof typeof VARIANTS;
+  weight?: 'regular' | 'semiBold' | 'bold';
+  color?: Color;
+  tag?: keyof JSX.IntrinsicElements;
+  ellipsis?: boolean;
+  align?: 'start' | 'center' | 'end';
+  children?: React.ReactNode;
+} & Omit<React.HTMLAttributes<HTMLElement>, 'color'> & { htmlFor?: string }) => (
+  <TextBase
+    as={tag as never}
+    $variant={variant}
+    $weight={weight === 'bold' ? 700 : weight === 'semiBold' ? 600 : weight === 'regular' ? 400 : undefined}
+    $color={color}
+    $ellipsis={ellipsis}
+    $align={align}
+    {...rest}
+  >
+    {children}
+  </TextBase>
+);
+
+/** A flex box, with the gap in pixels. */
+export const Flex = styled.div<{ $direction?: 'row' | 'column'; $gap?: number; $align?: string; $justify?: string; $wrap?: boolean; $grow?: boolean }>`
+  display: flex;
+  flex-direction: ${({ $direction = 'row' }) => $direction};
+  gap: ${({ $gap = 0 }) => $gap}px;
+  align-items: ${({ $align, $direction = 'row' }) => $align ?? ($direction === 'row' ? 'center' : 'stretch')};
+  justify-content: ${({ $justify = 'flex-start' }) => $justify};
+  flex-wrap: ${({ $wrap }) => ($wrap ? 'wrap' : 'nowrap')};
+  ${({ $grow }) =>
+    $grow
+      ? css`
+          flex: 1;
+          min-width: 0;
+        `
+      : ''}
+`;
+
+export const Divider = styled.hr`
+  width: 100%;
+  height: 1px;
+  margin: 0;
+  border: 0;
+  background: ${({ theme }) => theme.colors.neutral150};
+`;
+
+type ButtonVariant = 'default' | 'secondary' | 'tertiary' | 'danger' | 'danger-light' | 'ghost';
+
+const BUTTON: Record<ButtonVariant, (theme: DefaultTheme) => ReturnType<typeof css>> = {
+  default: (theme) => css`
+    background: ${buttonPrimary(theme)};
+    border-color: ${buttonPrimary(theme)};
+    color: ${buttonText(theme)};
+    &:hover:not(:disabled) {
+      background: ${buttonPrimaryHover(theme)};
+      border-color: ${buttonPrimaryHover(theme)};
+    }
+  `,
+  secondary: (theme) => css`
+    background: ${theme.colors.primary100};
+    border-color: ${theme.colors.primary200};
+    color: ${theme.colors.primary700};
+    &:hover:not(:disabled) {
+      background: ${theme.colors.neutral0};
+    }
+  `,
+  tertiary: (theme) => css`
+    background: ${theme.colors.neutral0};
+    border-color: ${theme.colors.neutral200};
+    color: ${theme.colors.neutral800};
+    &:hover:not(:disabled) {
+      background: ${theme.colors.neutral100};
+    }
+  `,
+  danger: (theme) => css`
+    background: ${theme.colors.danger600};
+    border-color: ${theme.colors.danger600};
+    color: ${buttonText(theme)};
+    &:hover:not(:disabled) {
+      background: ${theme.colors.danger500};
+    }
+  `,
+  'danger-light': (theme) => css`
+    background: ${theme.colors.danger100};
+    border-color: ${theme.colors.danger200};
+    color: ${theme.colors.danger700};
+    &:hover:not(:disabled) {
+      background: ${theme.colors.neutral0};
+    }
+  `,
+  ghost: (theme) => css`
+    background: transparent;
+    border-color: transparent;
+    color: ${theme.colors.neutral800};
+    &:hover:not(:disabled) {
+      background: ${theme.colors.neutral100};
+    }
+  `,
+};
+
+const ButtonBase = styled.button<{ $variant: ButtonVariant; $size: 'S' | 'M' }>`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-shrink: 0;
+  height: ${({ $size }) => ($size === 'S' ? '32px' : '36px')};
+  padding: 0 ${({ $size }) => ($size === 'S' ? '12px' : '16px')};
+  border: 1px solid transparent;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  ${({ theme, $variant }) => BUTTON[$variant](theme)}
+
+  &:disabled {
+    cursor: not-allowed;
+    background: ${({ theme }) => theme.colors.neutral150};
+    border-color: ${({ theme }) => theme.colors.neutral200};
+    color: ${({ theme }) => theme.colors.neutral600};
+  }
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.primary600};
+    outline-offset: 2px;
+  }
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+`;
+
+export const Button = ({
+  variant = 'default',
+  size = 'M',
+  startIcon,
+  endIcon,
+  loading,
+  children,
+  type = 'button',
+  ...rest
+}: {
+  variant?: ButtonVariant;
+  size?: 'S' | 'M';
+  startIcon?: React.ReactNode;
+  endIcon?: React.ReactNode;
+  loading?: boolean;
+} & React.ButtonHTMLAttributes<HTMLButtonElement>) => (
+  <ButtonBase type={type} $variant={variant} $size={size} aria-busy={loading || undefined} {...rest} disabled={rest.disabled || loading}>
+    {loading ? <Spinner $size={14} /> : startIcon}
+    {children}
+    {endIcon}
+  </ButtonBase>
+);
+
+export const IconButton = ({ label, children, ...rest }: { label: string; children: React.ReactNode } & React.ButtonHTMLAttributes<HTMLButtonElement>) => (
+  <ButtonBase type="button" $variant="ghost" $size="S" aria-label={label} title={label} style={{ padding: 0, width: '32px' }} {...rest}>
+    {children}
+  </ButtonBase>
+);
+
+const fieldStyle = css`
+  width: 100%;
+  padding: 0 16px;
+  border: 1px solid ${({ theme }: { theme: DefaultTheme }) => theme.colors.neutral200};
+  border-radius: 4px;
+  background: ${({ theme }: { theme: DefaultTheme }) => theme.colors.neutral0};
+  color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.neutral800};
+  font: inherit;
+  font-size: 14px;
+  line-height: 20px;
+
+  &::placeholder {
+    color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.neutral500};
+  }
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.primary600};
+    box-shadow: ${({ theme }: { theme: DefaultTheme }) => theme.colors.primary600} 0 0 0 2px;
+  }
+`;
+
+export const Input = styled.input`
+  ${fieldStyle}
+  height: 40px;
+`;
+
+export const TextArea = styled.textarea`
+  ${fieldStyle}
+  display: block;
+  min-height: 105px;
+  padding: 12px 16px;
+  resize: vertical;
+`;
+
+export const Select = styled.select`
+  ${fieldStyle}
+  height: 40px;
+  padding-inline-end: 32px;
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: calc(100% - 18px) 50%, calc(100% - 13px) 50%;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+`;
+
+export const Label = ({ htmlFor, children, hint }: { htmlFor: string; children: React.ReactNode; hint?: string }) => (
+  <Flex $direction="column" $gap={4} style={{ paddingBottom: 4 }}>
+    <Text tag="label" variant="pi" weight="bold" htmlFor={htmlFor}>
+      {children}
+    </Text>
+    {hint ? (
+      <Text variant="pi" color="neutral600">
+        {hint}
+      </Text>
+    ) : null}
+  </Flex>
+);
+
+/** A search field, with its icon and a button that clears it. */
+const SearchWrap = styled.div`
+  position: relative;
+  svg {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    color: ${({ theme }) => theme.colors.neutral500};
+  }
+  > svg {
+    inset-inline-start: 12px;
+  }
+  input {
+    height: 36px;
+    padding-inline: 36px;
+  }
+`;
+
+export const SearchField = ({ value, onChange, placeholder, clearLabel }: { value: string; onChange: (value: string) => void; placeholder: string; clearLabel: string }) => (
+  <SearchWrap>
+    <SearchIcon />
+    <Input type="search" value={value} placeholder={placeholder} aria-label={placeholder} onChange={(event) => onChange(event.target.value)} />
+    {value ? (
+      <Bare type="button" aria-label={clearLabel} onClick={() => onChange('')} style={{ position: 'absolute', insetInlineEnd: 10, top: 0, bottom: 0 }}>
+        <CrossIcon />
+      </Bare>
+    ) : null}
+  </SearchWrap>
+);
+
+const spin = keyframes('spin', 'to { transform: rotate(360deg); }');
+
+export const Spinner = styled.span<{ $size?: number }>`
+  display: inline-block;
+  flex-shrink: 0;
+  width: ${({ $size = 24 }) => $size}px;
+  height: ${({ $size = 24 }) => $size}px;
+  border: 2px solid ${({ theme }) => theme.colors.neutral200};
+  border-top-color: ${({ theme }) => theme.colors.primary600};
+  border-radius: 50%;
+  animation: ${spin} 0.8s linear infinite;
+`;
+
+/* The dialog: one panel over the page, closed by Escape or its buttons. */
+
+const Overlay = styled.div`
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(33, 33, 52, 0.4);
+`;
+
+const DialogPanel = styled.div<{ $width: string }>`
+  display: flex;
+  flex-direction: column;
+  width: ${({ $width }) => $width};
+  max-width: 100%;
+  max-height: calc(100vh - 32px);
+  border-radius: 8px;
+  background: ${({ theme }) => theme.colors.neutral0};
+  box-shadow: ${({ theme }) => theme.shadows.popupShadow};
+  overflow: hidden;
+`;
+
+const DialogBar = styled.div<{ $at: 'top' | 'bottom' }>`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 20px;
+  background: ${({ theme, $at }) => ($at === 'top' ? theme.colors.neutral100 : theme.colors.neutral100)};
+  border-${({ $at }) => ($at === 'top' ? 'bottom' : 'top')}: 1px solid ${({ theme }) => theme.colors.neutral150};
+`;
+
+export const Dialog = ({
+  open,
+  onClose,
+  title,
+  children,
+  footer,
+  width = '560px',
+  closeLabel,
+}: {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  children: React.ReactNode;
+  footer: React.ReactNode;
+  width?: string;
+  closeLabel: string;
+}) => {
+  const panel = useRef<HTMLDivElement>(null);
+  // The latest onClose, read by the listener: an effect that depended on it would run again at
+  // every render of the parent, and take the focus back to the first field while one types.
+  const close = useRef(onClose);
+  close.current = onClose;
+  useEffect(() => {
+    if (!open) return;
+    const before = document.activeElement as HTMLElement | null;
+    const first = panel.current?.querySelector<HTMLElement>('input, textarea, select, button:not([data-close])');
+    first?.focus();
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') close.current();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      before?.focus?.();
+    };
+  }, [open]);
+  if (!open) return null;
+  return createPortal(
+    <Overlay onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+      <DialogPanel ref={panel} $width={width} role="dialog" aria-modal="true" aria-label={title}>
+        <DialogBar $at="top">
+          <Text variant="omega" weight="bold" tag="h2" style={{ flex: 1 }}>
+            {title}
+          </Text>
+          <IconButton label={closeLabel} onClick={onClose} data-close>
+            <CrossIcon />
+          </IconButton>
+        </DialogBar>
+        <div style={{ padding: '24px 20px', overflowY: 'auto' }}>{children}</div>
+        <DialogBar $at="bottom" style={{ justifyContent: 'space-between' }}>
+          {footer}
+        </DialogBar>
+      </DialogPanel>
+    </Overlay>,
+    document.body
+  );
+};
+
+/** "Are you sure?" before what cannot be undone at once. */
+export const Confirm = ({
+  open,
+  onClose,
+  onConfirm,
+  title,
+  children,
+  confirm,
+  cancel,
+  danger,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  title: string;
+  children: React.ReactNode;
+  confirm: string;
+  cancel: string;
+  danger?: boolean;
+}) => (
+  <Dialog
+    open={open}
+    onClose={onClose}
+    title={title}
+    width="420px"
+    closeLabel={cancel}
+    footer={
+      <>
+        <Button variant="tertiary" onClick={onClose}>
+          {cancel}
+        </Button>
+        <Button
+          variant={danger ? 'danger-light' : 'default'}
+          onClick={() => {
+            onClose();
+            onConfirm();
+          }}
+        >
+          {confirm}
+        </Button>
+      </>
+    }
+  >
+    <Text tag="p" align="center" style={{ display: 'block' }}>
+      {children}
+    </Text>
+  </Dialog>
+);
+
+/* A notice at the top of the page, for what failed. */
+
+const ToastBox = styled.div`
+  position: fixed;
+  top: 46px;
+  left: 50%;
+  z-index: 1100;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: min(500px, calc(100vw - 32px));
+  padding: 12px 16px;
+  border: 1px solid ${({ theme }) => theme.colors.danger200};
+  border-radius: 4px;
+  background: ${({ theme }) => theme.colors.danger100};
+  box-shadow: ${({ theme }) => theme.shadows.filterShadow};
+`;
+
+export const useToast = () => {
+  const [message, setMessage] = useState<string | null>(null);
+  useEffect(() => {
+    if (!message) return;
+    const timer = setTimeout(() => setMessage(null), 6000);
+    return () => clearTimeout(timer);
+  }, [message]);
+  const node = message
+    ? createPortal(
+        <ToastBox role="alert">
+          <Text variant="omega" color="danger700">
+            {message}
+          </Text>
+          <Bare type="button" aria-label="×" onClick={() => setMessage(null)}>
+            <CrossIcon />
+          </Bare>
+        </ToastBox>,
+        document.body
+      )
+    : null;
+  return { toast: setMessage, toastNode: node };
+};
+
+/** The page's head, as the admin's pages draw theirs. */
+export const PageHeader = ({ title, subtitle, actions }: { title: string; subtitle?: string; actions?: React.ReactNode }) => (
+  <Flex $justify="space-between" $align="flex-start" $gap={16} $wrap style={{ padding: '40px 56px 24px' }}>
+    <Flex $direction="column" $gap={4} $align="flex-start" style={{ minWidth: 0 }}>
+      <Text variant="alpha" tag="h1">
+        {title}
+      </Text>
+      {subtitle ? (
+        <Text variant="epsilon" color="neutral600" tag="p">
+          {subtitle}
+        </Text>
+      ) : null}
+    </Flex>
+    {actions ? <Flex $gap={8}>{actions}</Flex> : null}
+  </Flex>
+);

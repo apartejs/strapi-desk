@@ -1,5 +1,5 @@
-import { Headphones } from '@strapi/icons';
+import { Headset } from '../kit/icons';
 
-const PluginIcon = () => <Headphones />;
+const PluginIcon = () => <Headset />;
 
 export { PluginIcon };

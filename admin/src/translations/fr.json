@@ -74,5 +74,9 @@
   "panel.messages": "Messages",
   "chip.held_anyone": "Tenue",
   "now": "à l'instant",
-  "back": "Retour à la liste"
+  "back": "Retour à la liste",
+  "saved.edit": "Modifier",
+  "reply.read_only": "Votre rôle vous permet de lire cette conversation, pas d’y répondre.",
+  "forbidden": "Votre rôle ne le permet pas.",
+  "assign.pick": "Choisir un collègue"
 }

@@ -1,16 +1,10 @@
-import { Page } from '@strapi/strapi/admin';
-import { Routes, Route } from 'react-router-dom';
-
 import { Desk } from './Desk';
 
-const App = () => (
-  <Page.Protect permissions={[{ action: 'plugin::aparte-desk.use', subject: null }]}>
-    <Routes>
-      <Route index element={<Desk />} />
-      <Route path=":id" element={<Desk />} />
-      <Route path="*" element={<Page.Error />} />
-    </Routes>
-  </Page.Protect>
-);
+/**
+ * The desk's page. The admin shows it only to a role allowed to see the conversations (the menu
+ * link carries that permission); the server checks every route again, so the page has no router
+ * and no guard of its own: neither is the same in Strapi 4 and in Strapi 5.
+ */
+const App = () => <Desk />;
 
 export default App;

@@ -1,7 +1,6 @@
-import { Box, Divider, Flex, Typography } from '@strapi/design-system';
 import type { Detail } from '../api';
+import { Avatar, Card, Column, Divider, Flex, Scroll, Text, initials } from '../kit/ui';
 import { StateChip } from './StateChip';
-import { Avatar, Card, Column, Scroll, initials } from './ui';
 import { useWords } from './words';
 
 /** "orderNumber" → "Order number", "plan_name" → "Plan name". */
@@ -15,13 +14,13 @@ const label = (key: string) => {
 };
 
 const Line = ({ name, value }: { name: string; value: string }) => (
-  <Flex justifyContent="space-between" alignItems="flex-start" gap={3} paddingBottom={2}>
-    <Typography variant="omega" textColor="neutral600" tag="dt" style={{ flexShrink: 0 }}>
+  <Flex $justify="space-between" $align="flex-start" $gap={12} style={{ paddingBottom: 8 }}>
+    <Text color="neutral600" tag="dt" style={{ flexShrink: 0 }}>
       {name}
-    </Typography>
-    <Typography variant="omega" textColor="neutral800" tag="dd" style={{ textAlign: 'end', overflowWrap: 'anywhere' }}>
+    </Text>
+    <Text tag="dd" align="end" style={{ margin: 0, overflowWrap: 'anywhere' }}>
       {value}
-    </Typography>
+    </Text>
   </Flex>
 );
 
@@ -35,53 +34,53 @@ export const VisitorPanel = ({ detail, onOpen }: { detail: Detail; onOpen: (id: 
   return (
     <Column $border="start" data-visitor-panel aria-label={t('panel.title')}>
       <Scroll>
-        <Box padding={6}>
-          <Flex direction="column" alignItems="center" gap={2} paddingBottom={5}>
+        <div style={{ padding: 24 }}>
+          <Flex $direction="column" $align="center" $gap={8} style={{ paddingBottom: 20 }}>
             <Avatar $size={64}>{initials(name)}</Avatar>
-            <Typography variant="delta" tag="p" textAlign="center">
+            <Text variant="delta" tag="p" align="center">
               {name}
-            </Typography>
+            </Text>
             {detail.visitor.email ? (
-              <Typography variant="pi" textColor="neutral600" tag="p" style={{ overflowWrap: 'anywhere', textAlign: 'center' }}>
+              <Text variant="pi" color="neutral600" tag="p" align="center" style={{ overflowWrap: 'anywhere' }}>
                 <a href={`mailto:${detail.visitor.email}`} style={{ color: 'inherit' }}>
                   {detail.visitor.email}
                 </a>
-              </Typography>
+              </Text>
             ) : null}
           </Flex>
           <Divider />
-          <Box tag="dl" paddingTop={5}>
+          <dl style={{ margin: 0, paddingTop: 20 }}>
             <Line name={t('panel.started')} value={date(detail.conversation.createdAt)} />
             <Line name={t('panel.messages')} value={String(messages)} />
             {context.map(([key, value]) => (
               <Line key={key} name={label(key)} value={String(value)} />
             ))}
-          </Box>
+          </dl>
           {detail.visitor.conversations.length > 0 ? (
-            <Box paddingTop={5}>
-              <Typography variant="sigma" textColor="neutral600" tag="h3">
+            <div style={{ paddingTop: 20 }}>
+              <Text variant="sigma" color="neutral600" tag="h3">
                 {t('panel.previous')}
-              </Typography>
-              <Flex tag="ul" direction="column" alignItems="stretch" gap={2} paddingTop={3}>
+              </Text>
+              <Flex as="ul" $direction="column" $gap={8} style={{ margin: 0, padding: 0, paddingTop: 12, listStyle: 'none' }}>
                 {detail.visitor.conversations.map((other) => (
                   <li key={other.id}>
                     <Card type="button" onClick={() => onOpen(other.id)}>
-                      <Typography variant="omega" fontWeight="semiBold" textColor="neutral800" ellipsis tag="p">
+                      <Text weight="semiBold" ellipsis tag="p">
                         {other.title || t('visitor.guest')}
-                      </Typography>
-                      <Flex justifyContent="space-between" gap={2} paddingTop={1}>
-                        <Typography variant="pi" textColor="neutral600">
+                      </Text>
+                      <Flex $justify="space-between" $gap={8} style={{ paddingTop: 4 }}>
+                        <Text variant="pi" color="neutral600">
                           {when(other.lastMessageAt)}
-                        </Typography>
+                        </Text>
                         <StateChip row={{ state: other.state, holder: null }} me={null} />
                       </Flex>
                     </Card>
                   </li>
                 ))}
               </Flex>
-            </Box>
+            </div>
           ) : null}
-        </Box>
+        </div>
       </Scroll>
     </Column>
   );

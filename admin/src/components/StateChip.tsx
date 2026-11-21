@@ -1,5 +1,5 @@
-import { Typography } from '@strapi/design-system';
 import type { Row } from '../api';
+import { Text } from '../kit/ui';
 import { useWords } from './words';
 
 /** Where a conversation stands, in a few coloured words. */
@@ -16,8 +16,8 @@ export const StateChip = ({ row, me }: { row: Pick<Row, 'state' | 'holder'>; me:
           ? (['neutral500', t('chip.closed')] as const)
           : (['primary600', t('chip.assistant')] as const);
   return (
-    <Typography variant="pi" fontWeight="bold" textColor={color} style={{ whiteSpace: 'nowrap' }}>
+    <Text variant="pi" weight="bold" color={color} style={{ whiteSpace: 'nowrap' }}>
       {label}
-    </Typography>
+    </Text>
   );
 };
